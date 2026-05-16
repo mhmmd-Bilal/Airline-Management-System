@@ -1,7 +1,9 @@
 // controllers/bookingController.js
 import Bookings from "../models/bookingModel.js";
 import Flights from "../models/flightsModel.js";
-import Loyalty from '../models/loyaltyModel.js'
+import Loyalty from "../models/loyaltyModel.js";
+import { generateBookingPDFs } from "../services/pdfService.js";
+import { sendBookingEmail }    from "../services/mailService.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import dotenv from "dotenv";
@@ -238,7 +240,7 @@ export const verifyPayment = async (req, res) => {
       razorpaySignature,
     });
 
-    let loyalty = await Loyalty.findOne()
+    let loyalty = await Loyalty.findOne();
 
     const populated = await booking.populate(
       "flightId",
@@ -246,6 +248,36 @@ export const verifyPayment = async (req, res) => {
     );
 
     res.status(201).json({ success: true, data: populated });
+
+    (async () => {
+      try {
+        console.log(
+          `[booking] Generating PDFs for ${booking.bookingReference}...`,
+        );
+
+        const { boardingPasses, ticket, invoice } = await generateBookingPDFs(
+          populated,
+          populated.flightId,
+        );
+
+        console.log(`[booking] Sending email → ${passengers[0]?.email}`);
+
+        await sendBookingEmail({
+          booking: populated,
+          flight: populated.flightId,
+          boardingPasses,
+          ticket,
+          invoice,
+        });
+
+        console.log(`[booking] ✓ Email sent for ${booking.bookingReference}`);
+      } catch (err) {
+        console.error(
+          `[booking] PDF/email error for ${booking.bookingReference}:`,
+          err.message,
+        );
+      }
+    })();
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
