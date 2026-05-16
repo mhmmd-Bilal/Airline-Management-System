@@ -1,16 +1,17 @@
 import { useSelector } from "react-redux";
 import { Card, SectionLabel, InfoRow } from "../../components/crew/CrewShared";
 import { fmtDate } from "../../components/crew/crewConstants";
-import { useGetCrewByIdQuery } from "../../slices/crewApiSlice";
+import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
 
 export default function CrewMedical() {
   const { userData } = useSelector((state) => state.auth);
 
-  let crew;
+  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
+    userData?._id,
+    { skip: !userData?._id },
+  );
 
-  const { data,isLoading } = useGetCrewByIdQuery(userData?._id);
-
-  crew = data?.data;
+  const crew = crewData?.data;
 
   const medicalDueSoon =
     crew?.medicalNextDue &&

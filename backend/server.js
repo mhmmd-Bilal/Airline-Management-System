@@ -1,4 +1,7 @@
 import express from "express";
+import dotenv from "dotenv";
+dotenv.config();
+
 import connectDb from "./config/db.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -8,12 +11,10 @@ import aircraftRoutes from "./routes/aircraftRoutes.js";
 import flightRoutes from "./routes/flightRoutes.js";
 import crewRoutes from "./routes/crewRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
+import loyaltyRoutes from "./routes/loyaltyRoutes.js";
 
-
-import dotenv from "dotenv";
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
-
-dotenv.config();
 
 const app = express();
 
@@ -24,13 +25,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors());
 
-startFlightStatusCron()
+startFlightStatusCron();
 
 app.use("/api/user", userRoutes);
 app.use("/api/aircraft", aircraftRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/crew", crewRoutes);
 app.use("/api/attendance", attendanceRoutes);
-
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/loyalty", loyaltyRoutes);
 
 app.listen(4000, () => console.log("Server Started"));

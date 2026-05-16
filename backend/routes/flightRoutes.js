@@ -6,21 +6,21 @@ import {
   updateFlight,
   deleteFlight,
   getFlightStats,
-  assignCrew,
   getFlightsByCrewId,
+  searchFlights
 } from "../controllers/flightController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/getFlightsByCrewId",protect,getFlightsByCrewId)
-
-router.get("/stats", protect, adminOnly, getFlightStats);
+// routes/flightRoutes.js
+router.get("/search", searchFlights);
+router.get("/crew/:crewId", protect, getFlightsByCrewId); // ← before /:id
+router.get("/stats", protect, getFlightStats);
 router.get("/", protect, getAllFlights);
-router.get("/:id", protect, adminOnly, getFlightById);
+router.get("/:id", getFlightById);
 router.post("/", protect, adminOnly, createFlight);
 router.put("/:id", protect, adminOnly, updateFlight);
-router.patch("/:id/crew", protect, adminOnly, assignCrew);
 router.delete("/:id", protect, adminOnly, deleteFlight);
 
 export default router;

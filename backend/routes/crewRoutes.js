@@ -1,7 +1,7 @@
 import express from "express";
 import {
   getAllCrew,
-  getCrewById,
+  getCrewByUserId,
   createCrew,
   updateCrew,
   updateCrewStatus,
@@ -14,7 +14,7 @@ const router = express.Router();
 
 router.get("/stats", protect, adminOnly, getCrewStats);
 router.get("/", protect, adminOnly, getAllCrew);
-router.get("/:id", protect, getCrewById);
+router.get("/by-user/:userId", protect, getCrewByUserId);
 router.post("/", protect, adminOnly, createCrew);
 router.put("/:id", protect, adminOnly, updateCrew);
 router.patch("/:id/status", protect, adminOnly, updateCrewStatus);

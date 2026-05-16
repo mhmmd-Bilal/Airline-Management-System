@@ -14,7 +14,7 @@ import {
   inputCls,
 } from "../../components/crew/crewConstants";
 import { useGetAllFlightsQuery } from "../../slices/flightApiSlice";
-import { useGetCrewByIdQuery } from "../../slices/crewApiSlice";
+import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
 
 function Modal({ title, onClose, children }) {
   return (
@@ -41,12 +41,14 @@ export default function CrewProfile() {
   const [pw, setPw] = useState({ current: "", new: "", confirm: "" });
   const [pwErrors, setPwErrors] = useState({});
 
-  let crew;
   const name = userData?.name ?? "Crew Member";
 
-  const { data } = useGetCrewByIdQuery(userData?._id);
+  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
+    userData?._id,
+    { skip: !userData?._id },
+  );
 
-  crew = data?.data;
+  const crew = crewData?.data;
 
   const { data: flightData } = useGetAllFlightsQuery({
     status: "all",

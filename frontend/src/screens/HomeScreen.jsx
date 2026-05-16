@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import UserNavbar from "../components/UserNavbar";
 
 const destinations = [
   {
@@ -136,11 +137,9 @@ const features = [
 export default function HomeScreen() {
   const { userData } = useSelector((state) => state.auth);
 
-  const [tripType, setTripType] = useState("return");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [departure, setDeparture] = useState("");
-  const [returnDate, setReturnDate] = useState("");
   const [passengers, setPassengers] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -152,125 +151,16 @@ export default function HomeScreen() {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!userData) {
-      navigate("/login");
-    }
-  }, [userData]);
+  // useEffect(() => {
+  //   if (!userData) {
+  //     navigate("/login");
+  //   }
+  // }, [userData]);
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
       {/* ── Navbar ── */}
-      <nav className="bg-white border-b border-blue-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-[#0C3060] rounded-xl flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none">
-              <path d="M3 15l6-9 4 5 2-2 5 6H3z" fill="white" />
-              <path
-                d="M2 17h20"
-                stroke="white"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <span className="text-[#0C3060] font-bold text-lg tracking-tight">
-            AirlineMS
-          </span>
-        </div>
-
-        <div className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-500">
-          <Link
-            to={""}
-            className="text-[#0C3060] font-semibold border-b-2 border-[#0C3060] pb-0.5"
-          >
-            Flights
-          </Link>
-          <Link to={""} className="hover:text-[#0C3060] transition">
-            My Bookings
-          </Link>
-          <Link to={""} className="hover:text-[#0C3060] transition">
-            Deals
-          </Link>
-        </div>
-
-        <div className="hidden md:flex items-center gap-3">
-          {userData ? (
-            <>
-              <button
-                className="bg-[#EAF2FB] w-8 h-8 flex items-center justify-center rounded-full text-sm text-[#0C3060] font-medium hover:underline transition cursor-pointer"
-                onClick={() => navigate("/profile")}
-              >
-                {userData?.name?.charAt(0).toUpperCase()}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="text-sm text-[#0C3060] font-medium hover:underline transition"
-                onClick={() => navigate("/login")}
-              >
-                Sign in
-              </button>
-              <button
-                className="text-sm bg-[#0C3060] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#0a2550] active:scale-95 transition"
-                onClick={() => navigate("/register")}
-              >
-                Register
-              </button>
-            </>
-          )}
-        </div>
-
-        <button
-          className="md:hidden text-[#0C3060]"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            {menuOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
-        </button>
-      </nav>
-
-      {menuOpen && (
-        <div className="md:hidden bg-white border-b border-blue-100 px-6 py-4 flex flex-col gap-4 text-sm font-medium text-slate-600">
-          <Link to={""}>Flights</Link>
-          <Link to={""}>My Bookings</Link>
-          <Link to={""}>Deals</Link>
-          <div className="flex gap-3 pt-2 border-t border-blue-50">
-            <button
-              className="flex-1 border border-[#C5D8ED] text-[#0C3060] rounded-lg py-2 text-sm font-medium"
-              onClick={() => navigate("/login")}
-            >
-              Sign in
-            </button>
-            <button
-              className="flex-1 bg-[#0C3060] text-white rounded-lg py-2 text-sm font-medium"
-              onClick={() => navigate("/register")}
-            >
-              Register
-            </button>
-          </div>
-        </div>
-      )}
+      <UserNavbar/>
 
       {/* ── Hero ── */}
       <div className="relative h-130 md:h-150 overflow-hidden">
@@ -301,23 +191,6 @@ export default function HomeScreen() {
       {/* ── Search Card (overlapping hero) ── */}
       <div className="max-w-4xl mx-auto px-4 -mt-16 relative z-10 mb-16">
         <div className="bg-white rounded-2xl shadow-xl border border-blue-100 p-6 md:p-8">
-          <div className="flex gap-2 mb-6">
-            {["return", "one-way", "multi-city"].map((type) => (
-              <button
-                key={type}
-                onClick={() => setTripType(type)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize border transition
-                  ${
-                    tripType === type
-                      ? "bg-[#0C3060] text-white border-[#0C3060]"
-                      : "bg-white text-slate-500 border-slate-200 hover:border-[#0C3060] hover:text-[#0C3060]"
-                  }`}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-
           <div className="flex flex-col md:flex-row gap-3 mb-3 items-end">
             <div className="flex-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">
@@ -399,19 +272,6 @@ export default function HomeScreen() {
                 className="w-full h-12 border border-slate-200 rounded-xl px-3 text-sm text-[#0C3060] outline-none focus:border-[#0C3060] focus:ring-2 focus:ring-blue-50 bg-slate-50 transition"
               />
             </div>
-            {tripType === "return" && (
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">
-                  Return
-                </label>
-                <input
-                  type="date"
-                  value={returnDate}
-                  onChange={(e) => setReturnDate(e.target.value)}
-                  className="w-full h-12 border border-slate-200 rounded-xl px-3 text-sm text-[#0C3060] outline-none focus:border-[#0C3060] focus:ring-2 focus:ring-blue-50 bg-slate-50 transition"
-                />
-              </div>
-            )}
             <div className="w-full md:w-44">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-1.5">
                 Passengers
@@ -435,8 +295,15 @@ export default function HomeScreen() {
               </div>
             </div>
           </div>
-
-          <button className="w-full h-13 bg-[#0C3060] hover:bg-[#0a2550] active:scale-95 text-white rounded-xl text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 py-3.5">
+          <button
+            onClick={() => {
+              if (!from || !to || !departure) return;
+              navigate(
+                `/search?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&date=${departure}&passengers=${passengers}`,
+              );
+            }}
+            className="w-full h-13 bg-[#0C3060] hover:bg-[#0a2550] active:scale-95 text-white rounded-xl text-sm font-bold tracking-wide transition flex items-center justify-center gap-2 py-3.5 cursor-pointer"
+          >
             <svg
               className="w-4 h-4"
               viewBox="0 0 24 24"

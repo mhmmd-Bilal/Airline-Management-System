@@ -5,6 +5,7 @@ const FLIGHTS_URL = "/api/flights";
 
 const flightApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+    // GET /api/flights?status=&search=&page=&limit=
     getAllFlights: builder.query({
       query: ({ status = "all", search = "", page = 1, limit = 10 } = {}) => ({
         url: FLIGHTS_URL,
@@ -13,16 +14,28 @@ const flightApiSlice = apiSlice.injectEndpoints({
       providesTags: ["Flight"],
     }),
 
+    // GET /api/flights/stats
     getFlightStats: builder.query({
       query: () => ({ url: `${FLIGHTS_URL}/stats` }),
       providesTags: ["Flight"],
     }),
 
+    // GET /api/flights/:id
     getFlightById: builder.query({
       query: (id) => ({ url: `${FLIGHTS_URL}/${id}` }),
       providesTags: ["Flight"],
     }),
 
+    // GET /api/flights/crew/:crewId?status=&page=&limit=
+    getFlightsByCrewId: builder.query({
+      query: ({ crewId, status = "all", page = 1, limit = 10 } = {}) => ({
+        url: `${FLIGHTS_URL}/crew/${crewId}`,
+        params: { status, page, limit },
+      }),
+      providesTags: ["Flight"],
+    }),
+
+    // POST /api/flights
     createFlight: builder.mutation({
       query: (data) => ({
         url: FLIGHTS_URL,
@@ -32,7 +45,7 @@ const flightApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Flight"],
     }),
 
-    // handles status, currentStop, crew, or any field — all in one
+    // PUT /api/flights/:id — handles all field updates
     updateFlight: builder.mutation({
       query: ({ id, ...data }) => ({
         url: `${FLIGHTS_URL}/${id}`,
@@ -42,16 +55,7 @@ const flightApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Flight"],
     }),
 
-    // PATCH /api/flights/:id/crew
-    assignCrew: builder.mutation({
-      query: ({ id, crewIds }) => ({
-        url: `${FLIGHTS_URL}/${id}/crew`,
-        method: "PATCH",
-        body: { crewIds },
-      }),
-      invalidatesTags: ["Flight"],
-    }),
-
+    // DELETE /api/flights/:id
     deleteFlight: builder.mutation({
       query: (id) => ({
         url: `${FLIGHTS_URL}/${id}`,
@@ -59,11 +63,12 @@ const flightApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Flight"],
     }),
-    getFlightsByCrewId: builder.query({
-      query: (params) => ({
-        url: `${FLIGHTS_URL}/getFlightsByCrewId`,
-        params,
+    searchFlights: builder.query({
+      query: ({ source, destination, date, passengers = 1 }) => ({
+        url: `${FLIGHTS_URL}/search`,
+        params: { source, destination, date, passengers },
       }),
+      providesTags: ["Flight"],
     }),
   }),
 });
@@ -72,8 +77,10 @@ export const {
   useGetAllFlightsQuery,
   useGetFlightStatsQuery,
   useGetFlightByIdQuery,
+  useGetFlightsByCrewIdQuery,
+  useLazyGetFlightsByCrewIdQuery,
   useCreateFlightMutation,
   useUpdateFlightMutation,
   useDeleteFlightMutation,
-  useLazyGetFlightsByCrewIdQuery
+  useSearchFlightsQuery
 } = flightApiSlice;

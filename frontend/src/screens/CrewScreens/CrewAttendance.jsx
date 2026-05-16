@@ -83,7 +83,7 @@ function Card({ children, className = "" }) {
     <div
       className={`bg-white border border-[#D0E6F7] rounded-2xl ${className}`}
     >
-      {children}
+      {children} 
     </div>
   );
 }

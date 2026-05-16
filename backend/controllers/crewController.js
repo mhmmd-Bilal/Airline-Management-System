@@ -13,20 +13,22 @@ export const getAllCrew = expressAsyncHandler(async (req, res) => {
     currentStatus,
     medicalStatus,
     search,
-    page  = 1,
+    page = 1,
     limit = 10,
   } = req.query;
 
   const crewQuery = {};
-  if (role          && role          !== "all") crewQuery.role          = role;
-  if (currentStatus && currentStatus !== "all") crewQuery.currentStatus = currentStatus;
-  if (medicalStatus && medicalStatus !== "all") crewQuery.medicalStatus = medicalStatus;
+  if (role && role !== "all") crewQuery.role = role;
+  if (currentStatus && currentStatus !== "all")
+    crewQuery.currentStatus = currentStatus;
+  if (medicalStatus && medicalStatus !== "all")
+    crewQuery.medicalStatus = medicalStatus;
 
   if (search) {
     const matchingUsers = await Users.find({
       role: "crew",
       $or: [
-        { name:  { $regex: search, $options: "i" } },
+        { name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
       ],
@@ -36,30 +38,35 @@ export const getAllCrew = expressAsyncHandler(async (req, res) => {
   }
 
   const total = await Crews.countDocuments(crewQuery);
-  const crew  = await Crews.find(crewQuery)
+  const crew = await Crews.find(crewQuery)
     .populate("userId", "name email phone role")
     .sort({ createdAt: -1 })
     .skip((Number(page) - 1) * Number(limit))
     .limit(Number(limit));
 
   res.status(200).json({
-    success:    true,
+    success: true,
     total,
-    page:       Number(page),
+    page: Number(page),
     totalPages: Math.ceil(total / Number(limit)),
-    data:       crew,
+    data: crew,
   });
 });
 
-// ── @desc    Get single crew member
-// ── @route   GET /api/crew/:id
-// ── @access  Admin
-export const getCrewById = expressAsyncHandler(async (req, res) => {
-  const crew = await Crews.findOne({userId : req.params.id})
-    .populate("userId", "name email phone role");
+// controllers/crewController.js — add this
+// ── @desc    Get crew profile by User _id
+// ── @route   GET /api/crew/by-user/:userId
+// ── @access  Crew / Admin
+export const getCrewByUserId = expressAsyncHandler(async (req, res) => {
+  const crew = await Crews.findOne({ userId: req.params.userId }).populate(
+    "userId",
+    "name email phone role",
+  );
 
   if (!crew) {
-    return res.status(404).json({ success: false, message: "Crew member not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew profile not found" });
   }
 
   res.status(200).json({ success: true, data: crew });
@@ -70,9 +77,17 @@ export const getCrewById = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const getCrewStats = expressAsyncHandler(async (req, res) => {
   const [
-    total, available, onDuty, offDuty, onLeave,
-    fit, underTreatment,
-    pilots, coPilots, cabinCrew, groundStaff,
+    total,
+    available,
+    onDuty,
+    offDuty,
+    onLeave,
+    fit,
+    underTreatment,
+    pilots,
+    coPilots,
+    cabinCrew,
+    groundStaff,
   ] = await Promise.all([
     Crews.countDocuments(),
     Crews.countDocuments({ currentStatus: "Available" }),
@@ -91,9 +106,9 @@ export const getCrewStats = expressAsyncHandler(async (req, res) => {
     success: true,
     data: {
       total,
-      status:  { available, onDuty, offDuty, onLeave },
+      status: { available, onDuty, offDuty, onLeave },
       medical: { fit, underTreatment },
-      roles:   { pilots, coPilots, cabinCrew, groundStaff },
+      roles: { pilots, coPilots, cabinCrew, groundStaff },
     },
   });
 });
@@ -105,10 +120,22 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
   let createdUser = null;
 
   const {
-    name, email, phone, password,
-    employeeId, role, experience, licenseNumber, licenseExpiry,
-    nationality, dateOfBirth, currentStatus, salary,
-    medicalStatus, medicalLastChecked, medicalNextDue,
+    name,
+    email,
+    phone,
+    password,
+    employeeId,
+    role,
+    experience,
+    licenseNumber,
+    licenseExpiry,
+    nationality,
+    dateOfBirth,
+    currentStatus,
+    salary,
+    medicalStatus,
+    medicalLastChecked,
+    medicalNextDue,
   } = req.body;
 
   // ── Required field validation ──
@@ -126,7 +153,9 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
   ]);
 
   if (emailExists) {
-    return res.status(400).json({ success: false, message: "Email already registered" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Email already registered" });
   }
 
   if (employeeIdExists) {
@@ -140,34 +169,34 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
     // ── Create User ──
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    console.log(email)
+    console.log(email);
 
     createdUser = await Users.create({
-      name, email, phone,
+      name,
+      email,
+      phone,
       password: hashedPassword,
       role: "crew",
     });
 
     // ── Create Crew profile ──
     const crew = await Crews.create({
-      userId:             createdUser._id,
+      userId: createdUser._id,
       employeeId,
       role,
-      experience:         experience         || 0,
-      licenseNumber:      licenseNumber      || null,
-      licenseExpiry:      licenseExpiry      || null,
-      nationality:        nationality        || null,
-      dateOfBirth:        dateOfBirth        || null,
-      currentStatus:      currentStatus      || "Available",
-      salary:             salary             || null,
-      medicalStatus:      medicalStatus      || "Fit",
+      experience: experience || 0,
+      licenseNumber: licenseNumber || null,
+      licenseExpiry: licenseExpiry || null,
+      nationality: nationality || null,
+      dateOfBirth: dateOfBirth || null,
+      currentStatus: currentStatus || "Available",
+      salary: salary || null,
+      medicalStatus: medicalStatus || "Fit",
       medicalLastChecked: medicalLastChecked || null,
-      medicalNextDue:     medicalNextDue     || null,
+      medicalNextDue: medicalNextDue || null,
     });
 
-
     const populated = await crew.populate("userId", "name email phone role");
-
 
     res.status(201).json({ success: true, data: populated });
   } catch (error) {
@@ -185,26 +214,44 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
 export const updateCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
   if (!crew) {
-    return res.status(404).json({ success: false, message: "Crew member not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
   }
 
   const user = await Users.findById(crew.userId);
   if (!user) {
-    return res.status(404).json({ success: false, message: "Associated user not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Associated user not found" });
   }
 
   const {
-    name, email, phone, password,
-    employeeId, role, experience, licenseNumber, licenseExpiry,
-    nationality, dateOfBirth, currentStatus, salary,
-    medicalStatus, medicalLastChecked, medicalNextDue,
+    name,
+    email,
+    phone,
+    password,
+    employeeId,
+    role,
+    experience,
+    licenseNumber,
+    licenseExpiry,
+    nationality,
+    dateOfBirth,
+    currentStatus,
+    salary,
+    medicalStatus,
+    medicalLastChecked,
+    medicalNextDue,
   } = req.body;
 
   // ── Duplicate checks only if values are changing ──
   if (email && email !== user.email) {
     const emailExists = await Users.findOne({ email });
     if (emailExists) {
-      return res.status(400).json({ success: false, message: "Email already in use" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use" });
     }
   }
 
@@ -219,7 +266,7 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
   }
 
   // ── Update User ──
-  user.name  = name  ?? user.name;
+  user.name = name ?? user.name;
   user.email = email ?? user.email;
   user.phone = phone ?? user.phone;
   if (password && password.trim().length >= 6) {
@@ -228,20 +275,20 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
   await user.save();
 
   // ── Update Crew ──
-  crew.employeeId         = employeeId         ?? crew.employeeId;
-  crew.role               = role               ?? crew.role;
-  crew.experience         = experience         ?? crew.experience;
-  crew.licenseNumber      = licenseNumber      ?? crew.licenseNumber;
-  crew.licenseExpiry      = licenseExpiry      ?? crew.licenseExpiry;
-  crew.nationality        = nationality        ?? crew.nationality;
-  crew.dateOfBirth        = dateOfBirth        ?? crew.dateOfBirth;
-  crew.currentStatus      = currentStatus      ?? crew.currentStatus;
-  crew.salary             = salary             ?? crew.salary;
-  crew.medicalStatus      = medicalStatus      ?? crew.medicalStatus;
+  crew.employeeId = employeeId ?? crew.employeeId;
+  crew.role = role ?? crew.role;
+  crew.experience = experience ?? crew.experience;
+  crew.licenseNumber = licenseNumber ?? crew.licenseNumber;
+  crew.licenseExpiry = licenseExpiry ?? crew.licenseExpiry;
+  crew.nationality = nationality ?? crew.nationality;
+  crew.dateOfBirth = dateOfBirth ?? crew.dateOfBirth;
+  crew.currentStatus = currentStatus ?? crew.currentStatus;
+  crew.salary = salary ?? crew.salary;
+  crew.medicalStatus = medicalStatus ?? crew.medicalStatus;
   crew.medicalLastChecked = medicalLastChecked ?? crew.medicalLastChecked;
-  crew.medicalNextDue     = medicalNextDue     ?? crew.medicalNextDue;
+  crew.medicalNextDue = medicalNextDue ?? crew.medicalNextDue;
 
-  const updated   = await crew.save();
+  const updated = await crew.save();
   const populated = await updated.populate("userId", "name email phone role");
 
   res.status(200).json({ success: true, data: populated });
@@ -264,11 +311,13 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findByIdAndUpdate(
     req.params.id,
     { currentStatus },
-    { new: true }
+    { new: true },
   ).populate("userId", "name email phone role");
 
   if (!crew) {
-    return res.status(404).json({ success: false, message: "Crew member not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
   }
 
   res.status(200).json({ success: true, data: crew });
@@ -280,7 +329,9 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
 export const deleteCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
   if (!crew) {
-    return res.status(404).json({ success: false, message: "Crew member not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
   }
 
   if (crew.currentStatus === "On Duty") {
@@ -290,10 +341,9 @@ export const deleteCrew = expressAsyncHandler(async (req, res) => {
     });
   }
 
-  await Promise.all([
-    crew.deleteOne(),
-    Users.findByIdAndDelete(crew.userId),
-  ]);
+  await Promise.all([crew.deleteOne(), Users.findByIdAndDelete(crew.userId)]);
 
-  res.status(200).json({ success: true, message: "Crew member deleted successfully" });
+  res
+    .status(200)
+    .json({ success: true, message: "Crew member deleted successfully" });
 });

@@ -27,8 +27,8 @@ const crewApiSlice = apiSlice.injectEndpoints({
     }),
 
     // GET /api/crew/:id
-    getCrewById: builder.query({
-      query: (id) => ({ url: `${CREW_URL}/${id}` }),
+    getCrewByUserId: builder.query({
+      query: (userId) => ({ url: `${CREW_URL}/by-user/${userId}` }),
       providesTags: ["Crew"],
     }),
 
@@ -76,9 +76,9 @@ const crewApiSlice = apiSlice.injectEndpoints({
 export const {
   useGetAllCrewQuery,
   useGetCrewStatsQuery,
-  useGetCrewByIdQuery,
   useCreateCrewMutation,
   useUpdateCrewMutation,
   useUpdateCrewStatusMutation,
   useDeleteCrewMutation,
+  useGetCrewByUserIdQuery
 } = crewApiSlice;

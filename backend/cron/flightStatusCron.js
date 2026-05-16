@@ -21,12 +21,8 @@ async function transition({ label, filter, update }) {
   return result;
 }
 
-// ── Check if a flight has actually reached its final destination ──
-// A flight is truly complete only when:
-//   (a) currentStop matches the last entry in routes[], OR
-//   (b) routes[] is empty/undefined AND arrivalTime has passed
+// ── in-flight → completed ──────────────────────────────
 async function completeArrivedFlights(now) {
-  // fetch all in-flight flights that have passed arrivalTime
   const candidates = await Flights.find({
     status:      "in-flight",
     arrivalTime: { $lte: now },
@@ -57,7 +53,7 @@ async function completeArrivedFlights(now) {
       continue;
     }
 
-    // currentStop is a mid-stop, not final → DO NOT complete yet
+    // currentStop is a mid-stop — DO NOT complete yet
     log.info(
       `Flight ${f._id} skipped completion — at mid-stop "${f.currentStop}", final is "${lastStop}"`
     );
@@ -67,7 +63,12 @@ async function completeArrivedFlights(now) {
 
   const result = await Flights.updateMany(
     { _id: { $in: toComplete } },
-    { $set: { status: "completed" } }
+    {
+      $set: {
+        status:            "completed",
+        actualArrivalTime: now,       // ← exact time cron marked it complete
+      },
+    }
   );
 
   if (result.modifiedCount > 0) {
@@ -77,26 +78,32 @@ async function completeArrivedFlights(now) {
   return result;
 }
 
-// ── Catch-all: missed flights past arrivalTime ─────────
-// Same logic — only complete if at final stop or no stops defined
+// ── catch-all: missed flights past arrivalTime ─────────
 async function completeMissedFlights(now) {
   const candidates = await Flights.find({
     status:      { $in: ["scheduled", "boarding", "delayed"] },
     arrivalTime: { $lte: now },
   }).select("_id routes currentStop");
 
-  const toComplete = candidates.filter((f) => {
-    const lastStop = f.routes?.length > 0 ? f.routes[f.routes.length - 1] : null;
-    if (!lastStop) return true;
-    if (!f.currentStop) return true;
-    return f.currentStop === lastStop;
-  }).map((f) => f._id);
+  const toComplete = candidates
+    .filter((f) => {
+      const lastStop = f.routes?.length > 0 ? f.routes[f.routes.length - 1] : null;
+      if (!lastStop)      return true;
+      if (!f.currentStop) return true;
+      return f.currentStop === lastStop;
+    })
+    .map((f) => f._id);
 
   if (!toComplete.length) return { modifiedCount: 0 };
 
   const result = await Flights.updateMany(
     { _id: { $in: toComplete } },
-    { $set: { status: "completed" } }
+    {
+      $set: {
+        status:            "completed",
+        actualArrivalTime: now,       // ← exact time cron marked it complete
+      },
+    }
   );
 
   if (result.modifiedCount > 0) {
@@ -113,7 +120,7 @@ async function runFlightStatusEngine() {
 
   const results = await Promise.allSettled([
 
-    // 1. scheduled → boarding (within boarding window, not yet departed)
+    // 1. scheduled → boarding
     transition({
       label:  "scheduled → boarding",
       filter: {
@@ -123,7 +130,7 @@ async function runFlightStatusEngine() {
       update: { status: "boarding" },
     }),
 
-    // 2. boarding/scheduled/delayed → in-flight (departed, not yet arrived)
+    // 2. boarding/scheduled/delayed → in-flight
     transition({
       label:  "boarding/scheduled/delayed → in-flight",
       filter: {
@@ -134,12 +141,10 @@ async function runFlightStatusEngine() {
       update: { status: "in-flight" },
     }),
 
-    // 3. in-flight → completed
-    // ── Only if currentStop is the final stop (or no stops defined) ──
+    // 3. in-flight → completed (stop-aware + sets actualArrivalTime)
     completeArrivedFlights(now),
 
-    // 4. catch-all for missed flights
-    // ── Same stop-aware logic ──
+    // 4. catch-all missed flights (stop-aware + sets actualArrivalTime)
     completeMissedFlights(now),
 
     // 5. stuck on ground → cancelled
@@ -169,7 +174,13 @@ async function logSnapshot() {
 
   const active = await Flights.find(
     { status: { $nin: ["completed", "cancelled"] } },
-    { flightNumber: 1, status: 1, departureTime: 1, arrivalTime: 1, currentStop: 1, routes: 1, _id: 0 }
+    {
+      flightNumber: 1, status: 1,
+      departureTime: 1, arrivalTime: 1,
+      actualArrivalTime: 1,
+      currentStop: 1, routes: 1,
+      _id: 0,
+    }
   ).lean();
 
   if (!active.length) {
@@ -181,13 +192,16 @@ async function logSnapshot() {
   const rows = active.map((f) => {
     const depDiff  = Math.round((new Date(f.departureTime) - now) / 60000);
     const arrDiff  = Math.round((new Date(f.arrivalTime)   - now) / 60000);
-    const depStr   = depDiff >= 0 ? `in ${depDiff}m` : `${Math.abs(depDiff)}m ago`;
-    const arrStr   = arrDiff >= 0 ? `in ${arrDiff}m` : `${Math.abs(arrDiff)}m ago`;
+    const depStr   = depDiff >= 0 ? `in ${depDiff}m`         : `${Math.abs(depDiff)}m ago`;
+    const arrStr   = arrDiff >= 0 ? `in ${arrDiff}m`         : `${Math.abs(arrDiff)}m ago`;
     const lastStop = f.routes?.length > 0 ? f.routes[f.routes.length - 1] : "—";
     const stopInfo = f.currentStop
       ? `stop: ${f.currentStop} (final: ${lastStop})`
       : `no stop set (final: ${lastStop})`;
-    return `  ${f.flightNumber.padEnd(12)} | ${f.status.padEnd(10)} | dep: ${depStr.padStart(10)} | arr: ${arrStr.padStart(10)} | ${stopInfo}`;
+    const actualArr = f.actualArrivalTime
+      ? `actual: ${new Date(f.actualArrivalTime).toISOString()}`
+      : "";
+    return `  ${f.flightNumber.padEnd(12)} | ${f.status.padEnd(10)} | dep: ${depStr.padStart(10)} | arr: ${arrStr.padStart(10)} | ${stopInfo}${actualArr ? ` | ${actualArr}` : ""}`;
   });
 
   log.info(`Active flights (${active.length}):\n${rows.join("\n")}`);

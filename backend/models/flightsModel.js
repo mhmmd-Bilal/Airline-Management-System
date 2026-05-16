@@ -1,3 +1,4 @@
+// models/flightsModel.js
 import mongoose from "mongoose";
 
 const flightSchema = new mongoose.Schema(
@@ -29,6 +30,10 @@ const flightSchema = new mongoose.Schema(
     arrivalTime: {
       type: Date,
       required: true,
+    },
+    actualArrivalTime: {        // ← actual time flight completed/landed
+      type: Date,
+      default: null,
     },
     status: {
       type: String,
@@ -70,7 +75,7 @@ const flightSchema = new mongoose.Schema(
   },
 );
 
-const Flights = mongoose.model("flights", flightSchema);
-
 flightSchema.index({ status: 1, departureTime: 1, arrivalTime: 1 });
+
+const Flights = mongoose.model("flights", flightSchema);
 export default Flights;

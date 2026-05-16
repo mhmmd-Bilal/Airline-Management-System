@@ -22,7 +22,7 @@ const statusEnum = [
 ];
 
 const statusBadgeMap = {
-  scheduled: "On Time",
+  scheduled: "Scheduled",
   delayed: "Delayed",
   boarding: "Boarding",
   "in-flight": "In Flight",
@@ -331,12 +331,9 @@ function FlightForm({
       "cancelled",
     ].includes(status),
 
-    totalSeats: [
-      "in-flight",
-      "boarding",
-      "completed",
-      "cancelled",
-    ].includes(status),
+    totalSeats: ["in-flight", "boarding", "completed", "cancelled"].includes(
+      status,
+    ),
 
     source: [
       "in-flight",
@@ -523,9 +520,7 @@ function FlightForm({
           label="Available Seats"
           error={formErrors.totalSeats}
           hint={
-            lock.totalSeats
-              ? undefined
-              : "Auto-filled from aircraft capacity"
+            lock.totalSeats ? undefined : "Auto-filled from aircraft capacity"
           }
         >
           <Locked reason={lockReason("totalSeats")}>
@@ -690,389 +685,6 @@ function FlightForm({
   );
 }
 
-// ── Flight form ────────────────────────────────────────
-// function FlightForm({
-//   form,
-//   formErrors,
-//   updateForm,
-//   updateMultiple,
-//   editItem,
-// }) {
-//   const status = editItem?.status;
-
-//   // ── Lock rules per status ──────────────────────────────
-//   // true = field is disabled/readonly
-//   const lock = {
-//     all: ["completed", "cancelled"].includes(status),
-//     aircraft: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     flightNumber: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     totalSeats: [
-//       "in-flight",
-//       "boarding",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     source: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     destination: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     departureTime: ["in-flight", "boarding", "completed", "cancelled"].includes(
-//       status,
-//     ),
-//     arrivalTime: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     price: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     status: ["completed", "cancelled"].includes(status),
-//     routes: [
-//       "in-flight",
-//       "boarding",
-//       "delayed",
-//       "completed",
-//       "cancelled",
-//     ].includes(status),
-//     currentStop: ["completed", "cancelled"].includes(status),
-//     crew: ["in-flight", "completed", "cancelled"].includes(status),
-//   };
-
-//   // ── Disabled input style ───────────────────────────────
-//   const disabledCls = "opacity-50 cursor-not-allowed bg-[#F8FAFB] select-none";
-
-//   // ── Locked field wrapper — shows a lock icon + tooltip ─
-//   const Locked = ({ children, reason }) => (
-//     <div className="relative group">
-//       {children}
-//       <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-//         <i className="ti ti-lock text-[#B0C4D8] text-[12px]" />
-//       </div>
-//       {reason && (
-//         <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:flex items-center z-50">
-//           <div className="bg-[#0D1B2A] text-white text-[10px] font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-//             {reason}
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-
-//   // ── Status banner — shown when editing a locked flight ─
-//   const statusMessages = {
-//     completed: {
-//       msg: "This flight has completed. All fields are locked.",
-//       color: "bg-green-50 border-green-200 text-green-800",
-//       icon: "ti-circle-check text-green-600",
-//     },
-//     cancelled: {
-//       msg: "This flight is cancelled. All fields are locked.",
-//       color: "bg-red-50 border-red-200 text-red-800",
-//       icon: "ti-ban text-red-500",
-//     },
-//     "in-flight": {
-//       msg: "Flight is in-flight. Only current stop and status can be edited.",
-//       color: "bg-indigo-50 border-indigo-200 text-indigo-800",
-//       icon: "ti-plane text-indigo-600",
-//     },
-//     boarding: {
-//       msg: "Boarding in progress. Only status and crew can be edited.",
-//       color: "bg-violet-50 border-violet-200 text-violet-800",
-//       icon: "ti-door-enter text-violet-600",
-//     },
-//     delayed: {
-//       msg: "Flight is delayed. Only departure time, current stop and status can be edited.",
-//       color: "bg-orange-50 border-orange-200 text-orange-800",
-//       icon: "ti-clock-pause text-orange-500",
-//     },
-//   };
-
-//   const lockReason = (field) => {
-//     const map = {
-//       completed: "Locked — flight completed",
-//       cancelled: "Locked — flight cancelled",
-//       "in-flight": "Locked during flight",
-//       boarding: "Locked — boarding in progress",
-//       delayed: "Locked — only departure time editable",
-//     };
-//     return lock[field] ? map[status] : undefined;
-//   };
-
-//   const handleAircraftSelect = (aircraft) => {
-//     if (lock.aircraft) return;
-//     if (!aircraft) {
-//       updateMultiple({ aircraftId: "", flightNumber: "", totalSeats: "" });
-//       return;
-//     }
-//     updateMultiple({
-//       aircraftId: aircraft._id,
-//       flightNumber: generateFlightNumber(aircraft.registrationNumber),
-//       totalSeats: aircraft.capacity,
-//     });
-//   };
-
-//   return (
-//     <>
-//       {/* ── Status restriction banner ── */}
-//       {status && statusMessages[status] && (
-//         <div
-//           className={`flex items-start gap-2.5 px-4 py-3 rounded-xl border mb-5 ${statusMessages[status].color}`}
-//         >
-//           <i
-//             className={`ti ${statusMessages[status].icon} text-[15px] flex-shrink-0 mt-0.5`}
-//           />
-//           <p className="text-[12px] font-medium leading-relaxed">
-//             {statusMessages[status].msg}
-//           </p>
-//         </div>
-//       )}
-
-//       {/* ── Aircraft ── */}
-//       <Field
-//         label="Aircraft"
-//         error={formErrors.aircraftId}
-//         hint={
-//           lock.aircraft
-//             ? undefined
-//             : "Selecting an aircraft auto-fills flight number and seats"
-//         }
-//       >
-//         <div
-//           className={lock.aircraft ? `${disabledCls} pointer-events-none` : ""}
-//         >
-//           <AircraftSelect
-//             value={form.aircraftId}
-//             onSelect={handleAircraftSelect}
-//             editItem={editItem}
-//             disabled={lock.aircraft}
-//           />
-//         </div>
-//       </Field>
-
-//       <div className="grid grid-cols-2 gap-x-4">
-//         {/* ── Flight number ── */}
-//         <Field
-//           label="Flight Number"
-//           error={formErrors.flightNumber}
-//           hint={lock.flightNumber ? undefined : "Auto-generated, you can edit"}
-//         >
-//           <Locked reason={lockReason("flightNumber")}>
-//             <input
-//               className={`${inputCls} pr-9 ${lock.flightNumber ? disabledCls : ""}`}
-//               placeholder="Select aircraft first"
-//               value={form.flightNumber}
-//               disabled={lock.flightNumber}
-//               onChange={(e) => updateForm("flightNumber", e.target.value)}
-//             />
-//             {form.flightNumber && !lock.flightNumber && (
-//               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#1565C0] bg-blue-50 px-1.5 py-0.5 rounded-full">
-//                 auto
-//               </span>
-//             )}
-//           </Locked>
-//         </Field>
-
-//         {/* ── Available seats ── */}
-//         <Field
-//           label="Available Seats"
-//           error={formErrors.totalSeats}
-//           hint={
-//             lock.totalSeats
-//               ? undefined
-//               : "Auto-filled from aircraft capacity"
-//           }
-//         >
-//           <Locked reason={lockReason("totalSeats")}>
-//             <input
-//               type="number"
-//               className={`${inputCls} pr-9 ${lock.totalSeats ? disabledCls : ""}`}
-//               placeholder="Select aircraft first"
-//               value={form.totalSeats}
-//               disabled={lock.totalSeats}
-//               onChange={(e) => updateForm("totalSeats", e.target.value)}
-//             />
-//             {form.totalSeats && !lock.totalSeats && (
-//               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-semibold text-[#1565C0] bg-blue-50 px-1.5 py-0.5 rounded-full">
-//                 auto
-//               </span>
-//             )}
-//           </Locked>
-//         </Field>
-
-//         {/* ── Source ── */}
-//         <Field label="Source" error={formErrors.source}>
-//           <Locked reason={lockReason("source")}>
-//             <input
-//               className={`${inputCls} ${lock.source ? `${disabledCls} pr-9` : ""}`}
-//               placeholder="e.g. Delhi"
-//               value={form.source}
-//               disabled={lock.source}
-//               onChange={(e) => updateForm("source", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-
-//         {/* ── Destination ── */}
-//         <Field label="Destination" error={formErrors.destination}>
-//           <Locked reason={lockReason("destination")}>
-//             <input
-//               className={`${inputCls} ${lock.destination ? `${disabledCls} pr-9` : ""}`}
-//               placeholder="e.g. Mumbai"
-//               value={form.destination}
-//               disabled={lock.destination}
-//               onChange={(e) => updateForm("destination", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-
-//         {/* ── Departure time ── */}
-//         <Field label="Departure Time" error={formErrors.departureTime}>
-//           <Locked reason={lockReason("departureTime")}>
-//             <input
-//               type="datetime-local"
-//               className={`${inputCls} ${lock.departureTime ? `${disabledCls} pr-9` : ""}`}
-//               value={form.departureTime}
-//               disabled={lock.departureTime}
-//               onChange={(e) => updateForm("departureTime", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-
-//         {/* ── Arrival time ── */}
-//         <Field label="Arrival Time" error={formErrors.arrivalTime}>
-//           <Locked reason={lockReason("arrivalTime")}>
-//             <input
-//               type="datetime-local"
-//               className={`${inputCls} ${lock.arrivalTime ? `${disabledCls} pr-9` : ""}`}
-//               value={form.arrivalTime}
-//               disabled={lock.arrivalTime}
-//               onChange={(e) => updateForm("arrivalTime", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-
-//         {/* ── Price ── */}
-//         <Field label="Price (₹)" error={formErrors.price}>
-//           <Locked reason={lockReason("price")}>
-//             <input
-//               type="number"
-//               className={`${inputCls} ${lock.price ? `${disabledCls} pr-9` : ""}`}
-//               placeholder="e.g. 4500"
-//               value={form.price}
-//               disabled={lock.price}
-//               onChange={(e) => updateForm("price", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-
-//         {/* ── Status ── */}
-//         <Field label="Status">
-//           <Locked reason={lockReason("status")}>
-//             <select
-//               className={`${inputCls} ${lock.status ? `${disabledCls} pr-9` : ""}`}
-//               value={form.status}
-//               disabled={lock.status}
-//               onChange={(e) => updateForm("status", e.target.value)}
-//             >
-//               {statusEnum.map((s) => (
-//                 <option key={s} value={s}>
-//                   {s.charAt(0).toUpperCase() + s.slice(1)}
-//                 </option>
-//               ))}
-//             </select>
-//           </Locked>
-//         </Field>
-//       </div>
-
-//       {/* ── Routes ── */}
-//       <Field
-//         label="Stops (comma separated IATA codes)"
-//         hint={
-//           lock.routes ? undefined : "Include source and destination codes too"
-//         }
-//       >
-//         <Locked reason={lockReason("routes")}>
-//           <input
-//             className={`${inputCls} ${lock.routes ? `${disabledCls} pr-9` : ""}`}
-//             placeholder="e.g. DEL, NAG, BOM"
-//             value={form.routes}
-//             disabled={lock.routes}
-//             onChange={(e) => updateForm("routes", e.target.value)}
-//           />
-//         </Locked>
-//       </Field>
-
-//       {/* ── Current stop — only shown when editing ── */}
-//       {editItem && (
-//         <Field label="Current Stop">
-//           <Locked reason={lockReason("currentStop")}>
-//             <input
-//               className={`${inputCls} ${lock.currentStop ? `${disabledCls} pr-9` : ""}`}
-//               placeholder="e.g. NAG"
-//               value={form.currentStop}
-//               disabled={lock.currentStop}
-//               onChange={(e) => updateForm("currentStop", e.target.value)}
-//             />
-//           </Locked>
-//         </Field>
-//       )}
-
-//       {/* ── Crew ── */}
-//       <Field
-//         label="Assign Crew"
-//         hint={
-//           lock.crew
-//             ? undefined
-//             : `${form.crewIds.length} crew member${form.crewIds.length !== 1 ? "s" : ""} selected`
-//         }
-//       >
-//         <div className={lock.crew ? `${disabledCls} pointer-events-none` : ""}>
-//           <CrewSelect
-//             value={form.crewIds}
-//             onChange={(ids) => updateForm("crewIds", ids)}
-//             disabled={lock.crew}
-//           />
-//         </div>
-//       </Field>
-
-//       {formErrors.api && (
-//         <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-[12px] text-red-600">
-//           {formErrors.api}
-//         </div>
-//       )}
-//     </>
-//   );
-// }
-
 // ── Route visualiser ───────────────────────────────────
 function RouteVisualiser({ flight }) {
   const stops = flight.routes || [];
@@ -1095,9 +707,7 @@ function RouteVisualiser({ flight }) {
     ? new Date(flight.departureTime)
     : null;
 
-  const arrival = flight.arrivalTime
-    ? new Date(flight.arrivalTime)
-    : null;
+  const arrival = flight.arrivalTime ? new Date(flight.arrivalTime) : null;
 
   // ── Time based progress ───────────────────────────────
   const timeProgressPct = (() => {
@@ -1129,13 +739,10 @@ function RouteVisualiser({ flight }) {
   const currentStopIdx = (() => {
     if (!flight.currentStop) return -1;
 
-    const normalizedCurrent = String(flight.currentStop)
-      .trim()
-      .toLowerCase();
+    const normalizedCurrent = String(flight.currentStop).trim().toLowerCase();
 
     const idx = stops.findIndex(
-      (s) =>
-        String(s).trim().toLowerCase() === normalizedCurrent,
+      (s) => String(s).trim().toLowerCase() === normalizedCurrent,
     );
 
     if (idx !== -1) return idx;
@@ -1196,27 +803,18 @@ function RouteVisualiser({ flight }) {
       }
 
       // STRICT STOP PROGRESS
-      const pct =
-        ((stopBasedIdx + 1) / (totalSegments + 1)) * 100;
+      const pct = ((stopBasedIdx + 1) / (totalSegments + 1)) * 100;
 
-      return Math.min(
-        Math.max(Math.round(pct), 10),
-        95,
-      );
+      return Math.min(Math.max(Math.round(pct), 10), 95);
     }
 
     return 0;
   })();
 
   // ── Plane position ────────────────────────────────────
-  const showPlane = ["boarding", "in-flight"].includes(
-    status,
-  );
+  const showPlane = ["boarding", "in-flight"].includes(status);
 
-  const planePct =
-    status === "completed"
-      ? 98
-      : Math.min(progressPct + 1, 95);
+  const planePct = status === "completed" ? 98 : Math.min(progressPct + 1, 95);
 
   // ── Status colors ─────────────────────────────────────
   const statusColor =
@@ -1238,10 +836,7 @@ function RouteVisualiser({ flight }) {
   // ── Active stop index ─────────────────────────────────
   const activeIdx = (() => {
     if (stops.length > 0) {
-      if (
-        status === "in-flight" &&
-        stopBasedIdx >= stops.length - 1
-      ) {
+      if (status === "in-flight" && stopBasedIdx >= stops.length - 1) {
         return stops.length - 2;
       }
 
@@ -1268,9 +863,7 @@ function RouteVisualiser({ flight }) {
             {displayStops[0] || flight.source}
           </p>
 
-          <p className="text-[11px] text-[#7A90A4] mt-1">
-            {flight.source}
-          </p>
+          <p className="text-[11px] text-[#7A90A4] mt-1">{flight.source}</p>
         </div>
 
         <div className="flex-1 flex flex-col items-center px-4 gap-1">
@@ -1289,8 +882,7 @@ function RouteVisualiser({ flight }) {
 
         <div className="text-center">
           <p className="text-[28px] font-bold text-[#0D1B2A] leading-none">
-            {displayStops[displayStops.length - 1] ||
-              flight.destination}
+            {displayStops[displayStops.length - 1] || flight.destination}
           </p>
 
           <p className="text-[11px] text-[#7A90A4] mt-1">
@@ -1340,16 +932,13 @@ function RouteVisualiser({ flight }) {
         <div className="relative mt-2">
           <div className="flex items-start justify-between gap-2">
             {displayStops.map((stop, i) => {
-              const isPast =
-                activeIdx >= 0 && i < activeIdx;
+              const isPast = activeIdx >= 0 && i < activeIdx;
 
-              const isCurrent =
-                activeIdx >= 0 && i === activeIdx;
+              const isCurrent = activeIdx >= 0 && i === activeIdx;
 
               const isFirst = i === 0;
 
-              const isLast =
-                i === displayStops.length - 1;
+              const isLast = i === displayStops.length - 1;
 
               const dotFilled =
                 isPast ||
@@ -1388,12 +977,8 @@ function RouteVisualiser({ flight }) {
                       className="w-3 h-3 rounded-full border-2 relative z-10 transition-all duration-500"
                       style={{
                         borderColor: statusColor,
-                        backgroundColor: dotFilled
-                          ? statusColor
-                          : "white",
-                        transform: isCurrent
-                          ? "scale(1.3)"
-                          : "scale(1)",
+                        backgroundColor: dotFilled ? statusColor : "white",
+                        transform: isCurrent ? "scale(1.3)" : "scale(1)",
                       }}
                     />
                   </div>
@@ -1415,18 +1000,17 @@ function RouteVisualiser({ flight }) {
                     {stopLabel}
                   </p>
 
-                  {isCurrent &&
-                    status !== "cancelled" && (
-                      <span
-                        className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-                        style={{
-                          backgroundColor: `${statusColor}20`,
-                          color: statusColor,
-                        }}
-                      >
-                        Here
-                      </span>
-                    )}
+                  {isCurrent && status !== "cancelled" && (
+                    <span
+                      className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: `${statusColor}20`,
+                        color: statusColor,
+                      }}
+                    >
+                      Here
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -1434,26 +1018,20 @@ function RouteVisualiser({ flight }) {
 
           {/* Connector Lines */}
           <div className="absolute top-[5px] left-0 right-0 flex pointer-events-none px-[6px]">
-            {displayStops
-              .slice(0, -1)
-              .map((_, i) => {
-                const segFilled =
-                  status === "completed" ||
-                  (activeIdx >= 0 &&
-                    i < activeIdx);
+            {displayStops.slice(0, -1).map((_, i) => {
+              const segFilled =
+                status === "completed" || (activeIdx >= 0 && i < activeIdx);
 
-                return (
-                  <div
-                    key={i}
-                    className="h-0.5 flex-1 mx-1 rounded-full transition-all duration-500"
-                    style={{
-                      backgroundColor: segFilled
-                        ? statusColor
-                        : "#D0E6F7",
-                    }}
-                  />
-                );
-              })}
+              return (
+                <div
+                  key={i}
+                  className="h-0.5 flex-1 mx-1 rounded-full transition-all duration-500"
+                  style={{
+                    backgroundColor: segFilled ? statusColor : "#D0E6F7",
+                  }}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -1763,7 +1341,7 @@ export default function FlightsPage() {
                       <span
                         className={`text-[12px] font-semibold ${f.totalSeats === 0 ? "text-red-500" : "text-green-700"}`}
                       >
-                        {f.totalSeats === 0 ? "Full" : f.totalSeats}
+                        {`${f.availableSeats} / ${f.totalSeats}`}
                       </span>
                     </Td>
                     <Td className="text-[#7A90A4]">
@@ -1904,9 +1482,9 @@ export default function FlightsPage() {
               ["Aircraft model", viewItem.aircraftId?.model || "—"],
               [
                 "Available seats",
-                viewItem.totalSeats === 0
+                viewItem.availableSeats === 0
                   ? "Full"
-                  : viewItem.totalSeats,
+                  : viewItem.availableSeats,
               ],
               ["Price", `₹${viewItem.price?.toLocaleString()}`],
               ["Current stop", viewItem.currentStop || "—"],

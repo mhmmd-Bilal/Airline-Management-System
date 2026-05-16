@@ -6,6 +6,13 @@ import { useSelector } from "react-redux";
 import AdminRoutes from "./routes/AdminRoutes";
 import CrewRoutes from "./routes/CrewRoutes";
 import { ToastContainer } from "react-toastify";
+import SearchResults from "./screens/UserScreens/SearchResults";
+import FlightDetail from "./screens/UserScreens/FlightDetail";
+import BookingSuccess from "./screens/UserScreens/BookingSuccess";
+import MyBookings from "./screens/UserScreens/MyBookings";
+import UserProfile from "./screens/UserScreens/UserProfile";
+import DealsPage from "./screens/UserScreens/DealsPage";
+import LoyaltyScreen from "./screens/UserScreens/LoyaltyScreen";
 
 function App() {
   const { userData } = useSelector((state) => state.auth);
@@ -31,6 +38,13 @@ function App() {
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/register" element={<RegisterScreen />} />
         <Route path="/" element={<HomeScreen />} />
+        <Route path="/search" element={<SearchResults />} />
+        <Route path="/flights/:id" element={<FlightDetail />} />
+        <Route path="/booking-success/:id" element={<BookingSuccess />} />
+        <Route path="/bookings" element={<MyBookings />} />
+        <Route path="/deals" element={<DealsPage/>}/>
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/loyalty" element={<LoyaltyScreen/>}/>
       </Routes>
     </>
   );

@@ -1,6 +1,7 @@
 // controllers/attendanceController.js
 import Attendance from "../models/attendanceModel.js";
 import expressAsyncHandler from "express-async-handler";
+import Crews from "../models/crewModel.js";
 
 // ── @desc    Get today's attendance for logged-in crew
 // ── @route   GET /api/attendance/today
@@ -57,8 +58,6 @@ export const punchIn = expressAsyncHandler(async (req, res) => {
     istDate.getDate(),
   );
 
-  console.log(today)
-
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -89,6 +88,12 @@ export const punchIn = expressAsyncHandler(async (req, res) => {
       data: existing,
     });
   }
+
+  const crew = await Crews.findOne({ userId: req.user._id });
+
+  crew.currentStatus = "On Duty";
+
+  await crew.save();
 
   const attendance = await Attendance.create({
     staffId: req.user._id,
@@ -138,6 +143,12 @@ export const punchOut = expressAsyncHandler(async (req, res) => {
       message: "Already punched out today.",
     });
   }
+
+  const crew = await Crews.findOne({ userId: req.user._id });
+
+  crew.currentStatus = "Off Duty";
+
+  await crew.save();
 
   const now = new Date();
   const hoursOnDuty = (now - attendance.clockIn) / (1000 * 60 * 60);

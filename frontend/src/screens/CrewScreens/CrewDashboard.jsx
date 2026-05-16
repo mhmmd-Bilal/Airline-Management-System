@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import {
-  useLazyGetFlightsByCrewIdQuery,
-} from "../../slices/flightApiSlice";
+import { useLazyGetFlightsByCrewIdQuery } from "../../slices/flightApiSlice";
 import {
   useGetTodayAttendanceQuery,
   usePunchInMutation,
@@ -18,58 +16,79 @@ import {
   FlightCard,
   PunchCard,
 } from "../../components/crew/CrewShared";
-import { useGetCrewByIdQuery } from "../../slices/crewApiSlice";
+import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
 
 // ── Roles that are airborne ────────────────────────────
-const AIRBORNE_ROLES = ["Pilot", "Co-Pilot", "Cabin Crew", "Flight Engineer", "Purser"];
+const AIRBORNE_ROLES = [
+  "Pilot",
+  "Co-Pilot",
+  "Cabin Crew",
+  "Flight Engineer",
+  "Purser",
+];
 
 const isAirborneRole = (role) =>
   AIRBORNE_ROLES.some((r) => r.toLowerCase() === role?.toLowerCase());
 
 const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric",
-  }) : "—";
+  d
+    ? new Date(d).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
 
 export default function CrewDashboard() {
-  const { userData }  = useSelector((s) => s.auth);
-  const navigate      = useNavigate();
-  const [viewFlight,  setViewFlight]  = useState(null);
-  const [punchError,  setPunchError]  = useState("");
+  const { userData } = useSelector((s) => s.auth);
+  const navigate = useNavigate();
+  const [viewFlight, setViewFlight] = useState(null);
+  const [punchError, setPunchError] = useState("");
 
-  const name      = userData?.name ?? "Crew Member";
-  const firstName = name.split(" ").find((w) => !w.includes(".")) || name.split(" ")[0];
+  const name = userData?.name ?? "Crew Member";
+  const firstName =
+    name.split(" ").find((w) => !w.includes(".")) || name.split(" ")[0];
 
-  const { data }  = useGetCrewByIdQuery(userData?._id);
-  const crew      = data?.data;
+  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
+    userData?._id,
+    { skip: !userData?._id },
+  );
+
+  const crew = crewData?.data;
+  const crewId = crew?._id;
 
   // ── Role flags ─────────────────────────────────────
-  const airborne     = isAirborneRole(crew?.role);   // pilots, cabin crew etc.
-  const isGroundStaff = !airborne;                    // ground staff, ops, etc.
+  const airborne = isAirborneRole(crew?.role); // pilots, cabin crew etc.
+  const isGroundStaff = !airborne; // ground staff, ops, etc.
 
   const [getFlightsByCrewId, { data: flightData, isLoading: flightLoading }] =
     useLazyGetFlightsByCrewIdQuery();
 
-  const { data: attendanceData, isLoading: attendanceLoading } = useGetTodayAttendanceQuery();
-  const [punchIn,  { isLoading: punchingIn }]  = usePunchInMutation();
+  const { data: attendanceData, isLoading: attendanceLoading } =
+    useGetTodayAttendanceQuery();
+  const [punchIn, { isLoading: punchingIn }] = usePunchInMutation();
   const [punchOut, { isLoading: punchingOut }] = usePunchOutMutation();
 
-  const todayAttendance  = attendanceData?.data ?? null;
-  const allFlights       = flightData?.data ?? [];
+  const todayAttendance = attendanceData?.data ?? null;
+  const allFlights = flightData?.data ?? [];
 
   // Ground staff see all assigned flights; airborne crew filter by crewIds
   const myFlights = isGroundStaff
     ? allFlights
     : allFlights.filter((f) =>
-        f.crewIds?.some((c) => String(c?._id ?? c) === String(crew?._id))
+        f.crewIds?.some((c) => String(c?._id ?? c) === String(crew?._id)),
       );
 
-  const upcomingFlights  = myFlights.filter((f) => ["scheduled", "delayed", "boarding"].includes(f.status));
-  const activeFlights    = myFlights.filter((f) => f.status === "in-flight");   // always empty for ground staff
+  const upcomingFlights = myFlights.filter((f) =>
+    ["scheduled", "delayed", "boarding"].includes(f.status),
+  );
+  const activeFlights = myFlights.filter((f) => f.status === "in-flight"); // always empty for ground staff
   const completedFlights = myFlights.filter((f) => f.status === "completed");
 
-  const medicalDueSoon = crew?.medicalNextDue &&
-    new Date(crew.medicalNextDue) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const medicalDueSoon =
+    crew?.medicalNextDue &&
+    new Date(crew.medicalNextDue) <
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   const hour = new Date().getHours();
   const greeting =
@@ -101,18 +120,65 @@ export default function CrewDashboard() {
   const statCards = isGroundStaff
     ? [
         // Ground staff: no in-flight stat
-        { label: "Total Flights",  value: myFlights.length,       icon: "ti-plane",        color: "bg-blue-50 text-blue-700",    sub: "assigned"  },
-        { label: "Upcoming",       value: upcomingFlights.length, icon: "ti-calendar",     color: "bg-violet-50 text-violet-700",sub: "scheduled" },
-        { label: "Completed",      value: completedFlights.length,icon: "ti-circle-check", color: "bg-green-50 text-green-700",  sub: "done"      },
-        { label: "Delayed",        value: myFlights.filter((f) => f.status === "delayed").length,
-                                                                   icon: "ti-clock-pause",  color: "bg-orange-50 text-orange-700",sub: "watch"     },
+        {
+          label: "Total Flights",
+          value: myFlights.length,
+          icon: "ti-plane",
+          color: "bg-blue-50 text-blue-700",
+          sub: "assigned",
+        },
+        {
+          label: "Upcoming",
+          value: upcomingFlights.length,
+          icon: "ti-calendar",
+          color: "bg-violet-50 text-violet-700",
+          sub: "scheduled",
+        },
+        {
+          label: "Completed",
+          value: completedFlights.length,
+          icon: "ti-circle-check",
+          color: "bg-green-50 text-green-700",
+          sub: "done",
+        },
+        {
+          label: "Delayed",
+          value: myFlights.filter((f) => f.status === "delayed").length,
+          icon: "ti-clock-pause",
+          color: "bg-orange-50 text-orange-700",
+          sub: "watch",
+        },
       ]
     : [
         // Airborne crew: include in-flight
-        { label: "Total Flights",  value: myFlights.length,       icon: "ti-plane",              color: "bg-blue-50 text-blue-700",    sub: "assigned"  },
-        { label: "Upcoming",       value: upcomingFlights.length, icon: "ti-calendar",           color: "bg-violet-50 text-violet-700",sub: "scheduled" },
-        { label: "In Flight",      value: activeFlights.length,   icon: "ti-plane-departure",    color: "bg-green-50 text-green-700",  sub: "live"      },
-        { label: "Completed",      value: completedFlights.length,icon: "ti-circle-check",       color: "bg-orange-50 text-orange-700",sub: "done"      },
+        {
+          label: "Total Flights",
+          value: myFlights.length,
+          icon: "ti-plane",
+          color: "bg-blue-50 text-blue-700",
+          sub: "assigned",
+        },
+        {
+          label: "Upcoming",
+          value: upcomingFlights.length,
+          icon: "ti-calendar",
+          color: "bg-violet-50 text-violet-700",
+          sub: "scheduled",
+        },
+        {
+          label: "In Flight",
+          value: activeFlights.length,
+          icon: "ti-plane-departure",
+          color: "bg-green-50 text-green-700",
+          sub: "live",
+        },
+        {
+          label: "Completed",
+          value: completedFlights.length,
+          icon: "ti-circle-check",
+          color: "bg-orange-50 text-orange-700",
+          sub: "done",
+        },
       ];
 
   return (
@@ -141,7 +207,11 @@ export default function CrewDashboard() {
           </div>
           <div className="text-right">
             <p className="text-white text-[20px] font-bold leading-none">
-              {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              {new Date().toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
             </p>
             <p className="text-blue-200/60 text-[11px] mt-1 uppercase tracking-wider">
               {new Date().toLocaleDateString("en-IN", { weekday: "long" })}
@@ -151,7 +221,6 @@ export default function CrewDashboard() {
       </div>
 
       <div className="p-5 md:p-7">
-
         {/* ── Stat cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-7">
           {statCards.map((s) => (
@@ -167,9 +236,12 @@ export default function CrewDashboard() {
               <i className="ti ti-plane-departure text-white text-[20px]" />
             </div>
             <div className="flex-1 min-w-0 relative z-10">
-              <p className="text-white font-bold text-[14px]">Currently In Flight</p>
+              <p className="text-white font-bold text-[14px]">
+                Currently In Flight
+              </p>
               <p className="text-blue-200 text-[12px] mt-0.5">
-                {activeFlights[0].flightNumber} · {activeFlights[0].source} → {activeFlights[0].destination}
+                {activeFlights[0].flightNumber} · {activeFlights[0].source} →{" "}
+                {activeFlights[0].destination}
               </p>
             </div>
             <button
@@ -182,9 +254,11 @@ export default function CrewDashboard() {
         )}
 
         {/* ── Ground staff ops alert — shows delayed/boarding flights ── */}
-        {isGroundStaff && (
+        {isGroundStaff &&
           (() => {
-            const urgent = myFlights.filter((f) => ["boarding", "delayed"].includes(f.status));
+            const urgent = myFlights.filter((f) =>
+              ["boarding", "delayed"].includes(f.status),
+            );
             if (!urgent.length) return null;
             return (
               <div className="bg-orange-500 rounded-2xl p-5 mb-7 flex items-center gap-4 relative overflow-hidden">
@@ -193,9 +267,12 @@ export default function CrewDashboard() {
                   <i className="ti ti-alert-triangle text-white text-[20px]" />
                 </div>
                 <div className="flex-1 min-w-0 relative z-10">
-                  <p className="text-white font-bold text-[14px]">Action required</p>
+                  <p className="text-white font-bold text-[14px]">
+                    Action required
+                  </p>
                   <p className="text-orange-100 text-[12px] mt-0.5">
-                    {urgent.length} flight{urgent.length !== 1 ? "s" : ""} need ground handling —{" "}
+                    {urgent.length} flight{urgent.length !== 1 ? "s" : ""} need
+                    ground handling —{" "}
                     {urgent.map((f) => f.flightNumber).join(", ")}
                   </p>
                 </div>
@@ -207,8 +284,7 @@ export default function CrewDashboard() {
                 </button>
               </div>
             );
-          })()
-        )}
+          })()}
 
         {/* ── Upcoming flights + punch card ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 mb-7">
@@ -228,24 +304,36 @@ export default function CrewDashboard() {
             </div>
 
             {flightLoading ? (
-              <Card className="p-8 text-center text-[13px] text-[#7A90A4]">Loading...</Card>
+              <Card className="p-8 text-center text-[13px] text-[#7A90A4]">
+                Loading...
+              </Card>
             ) : upcomingFlights.length === 0 ? (
               <Card className="p-10 text-center">
                 <i className="ti ti-calendar-off text-[32px] text-[#D0E6F7] block mb-2" />
                 <p className="text-[13px] text-[#7A90A4]">
-                  {isGroundStaff ? "No flights to handle right now" : "No upcoming flights"}
+                  {isGroundStaff
+                    ? "No flights to handle right now"
+                    : "No upcoming flights"}
                 </p>
               </Card>
             ) : (
-              upcomingFlights.slice(0, 2).map((f) => (
-                <FlightCard key={f._id} flight={f} onClick={() => setViewFlight(f)} />
-              ))
+              upcomingFlights
+                .slice(0, 2)
+                .map((f) => (
+                  <FlightCard
+                    key={f._id}
+                    flight={f}
+                    onClick={() => setViewFlight(f)}
+                  />
+                ))
             )}
           </div>
 
           <div className="flex flex-col gap-3.5">
             {attendanceLoading ? (
-              <Card className="p-5 text-center text-[13px] text-[#7A90A4]">Loading attendance...</Card>
+              <Card className="p-5 text-center text-[13px] text-[#7A90A4]">
+                Loading attendance...
+              </Card>
             ) : (
               <PunchCard
                 attendance={todayAttendance}
@@ -258,14 +346,22 @@ export default function CrewDashboard() {
             )}
 
             {/* Medical card */}
-            <Card className={`p-5 ${crew?.medicalStatus === "Fit" ? "border-green-200" : "border-orange-200"}`}>
+            <Card
+              className={`p-5 ${crew?.medicalStatus === "Fit" ? "border-green-200" : "border-orange-200"}`}
+            >
               <SectionLabel>Medical</SectionLabel>
               <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${crew?.medicalStatus === "Fit" ? "bg-green-50" : "bg-orange-50"}`}>
-                  <i className={`ti ti-heart-rate-monitor text-[18px] ${crew?.medicalStatus === "Fit" ? "text-green-700" : "text-orange-700"}`} />
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${crew?.medicalStatus === "Fit" ? "bg-green-50" : "bg-orange-50"}`}
+                >
+                  <i
+                    className={`ti ti-heart-rate-monitor text-[18px] ${crew?.medicalStatus === "Fit" ? "text-green-700" : "text-orange-700"}`}
+                  />
                 </div>
                 <div>
-                  <p className={`text-[13px] font-bold ${crew?.medicalStatus === "Fit" ? "text-green-700" : "text-orange-700"}`}>
+                  <p
+                    className={`text-[13px] font-bold ${crew?.medicalStatus === "Fit" ? "text-green-700" : "text-orange-700"}`}
+                  >
                     {crew?.medicalStatus}
                   </p>
                   <p className="text-[10px] text-[#B0C4D8]">
@@ -277,7 +373,8 @@ export default function CrewDashboard() {
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-start gap-2">
                   <i className="ti ti-alert-triangle text-orange-500 text-[13px] mt-0.5 flex-shrink-0" />
                   <p className="text-[10px] text-orange-700 font-medium leading-relaxed">
-                    Renewal due soon. Schedule before {fmtDate(crew?.medicalNextDue)}.
+                    Renewal due soon. Schedule before{" "}
+                    {fmtDate(crew?.medicalNextDue)}.
                   </p>
                 </div>
               )}

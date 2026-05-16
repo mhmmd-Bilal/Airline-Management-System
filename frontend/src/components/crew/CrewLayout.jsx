@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTodayAttendanceQuery } from "../../slices/attendanceApiSlice";
-import { useGetCrewByIdQuery } from "../../slices/crewApiSlice";
+import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
 
 const navItems = [
   {
@@ -89,12 +89,14 @@ export default function CrewLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  let crew;
   const name = userData?.name ?? "Crew Member";
 
-  const { data } = useGetCrewByIdQuery(userData?._id);
+  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
+    userData?._id,
+    { skip: !userData?._id },
+  );
 
-  crew = data?.data;
+  const crew = crewData?.data;
 
   const { data: attendanceData } = useGetTodayAttendanceQuery();
   const todayAttendance = attendanceData?.data ?? null;
