@@ -11,6 +11,7 @@ import {
 } from "../../slices/flightApiSlice";
 import { useGetAllAircraftQuery } from "../../slices/aircraftApiSlice";
 import { useGetAllCrewQuery } from "../../slices/crewApiSlice";
+import { useNavigate } from "react-router-dom";
 
 const statusEnum = [
   "scheduled",
@@ -1074,6 +1075,8 @@ export default function FlightsPage() {
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
 
+  const navigate = useNavigate();
+
   const {
     data: listData,
     isLoading: listLoading,
@@ -1353,12 +1356,19 @@ export default function FlightsPage() {
                     <Td>
                       <div className="flex items-center gap-1.5">
                         <button
+                          onClick={() => navigate(`/flights/${f._id}`)}
+                          className="w-7 h-7 rounded-md border border-[#D0E6F7] bg-[#F0F7FF] flex items-center justify-center text-[#1565C0] hover:bg-[#E1EFFE] transition"
+                          title="View details"
+                        >
+                          <i className="ti ti-eye text-[13px]" />
+                        </button>
+                        {/* <button
                           onClick={() => setViewItem(f)}
                           className="w-7 h-7 rounded-md border border-[#D0E6F7] bg-[#F0F7FF] flex items-center justify-center text-[#1565C0] hover:bg-[#E1EFFE] transition"
                           title="View"
                         >
                           <i className="ti ti-eye text-[13px]" />
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => openEdit(f)}
                           className="w-7 h-7 rounded-md border border-[#D0E6F7] bg-[#F0F7FF] flex items-center justify-center text-[#1565C0] hover:bg-[#E1EFFE] transition"

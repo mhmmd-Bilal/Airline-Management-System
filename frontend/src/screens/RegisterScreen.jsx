@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRegisterUserMutation } from "../slices/userApiSlice";
+import {toast} from "react-toastify"
 
 const EmailIcon = () => (
   <svg
@@ -265,7 +266,8 @@ export default function RegisterScreen() {
         setSuccess(true);
       }
     } catch (error) {
-      console.log(error?.data?.message || error?.message);
+      // console.log(error?.data?.message || error?.message);
+      toast.error(error?.data?.message || error?.message)
     }
   };
 

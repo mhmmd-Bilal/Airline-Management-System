@@ -6,9 +6,10 @@ import FlightsPage from "../screens/AdminScreens/FlightsPage";
 import FleetPage from "../screens/AdminScreens/FleetPage";
 import CrewPage from "../screens/AdminScreens/CrewPage";
 import RevenuePage from "../screens/AdminScreens/RevenuePage";
-import SupportPage from "../screens/AdminScreens/SupportPage";
+import SupportPage from "../screens/AdminScreens/AdminSupportPage";
 import SettingsPage from "../screens/AdminScreens/SettingsPage";
 import { ToastContainer } from "react-toastify";
+import FlightDetailPage from "../screens/AdminScreens/FlightDetailPage";
 
 const adminPages = [
   { path: "/", element: <AdminDashboard /> },
@@ -41,6 +42,7 @@ export default function AdminRoutes() {
             {adminPages.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
+            <Route path="/flights/:id" element={<FlightDetailPage />} />
           </Route>
         </Route>
       </Routes>

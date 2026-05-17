@@ -3,10 +3,11 @@ import Bookings from "../models/bookingModel.js";
 import Flights from "../models/flightsModel.js";
 import Loyalty from "../models/loyaltyModel.js";
 import { generateBookingPDFs } from "../services/pdfService.js";
-import { sendBookingEmail }    from "../services/mailService.js";
+import { sendBookingEmail } from "../services/mailService.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import expressAsyncHandler from "express-async-handler";
 dotenv.config();
 
 const razorpay = new Razorpay({
@@ -244,7 +245,7 @@ export const verifyPayment = async (req, res) => {
 
     const populated = await booking.populate(
       "flightId",
-      "flightNumber source destination departureTime arrivalTime",
+      "flightNumber source destination departureTime arrivalTime price",
     );
 
     res.status(201).json({ success: true, data: populated });
@@ -368,3 +369,166 @@ export const getBookingStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+/* -------------------------------------------------------------------------- */
+/*  SHARED: load + authorise booking for download                             */
+/* -------------------------------------------------------------------------- */
+async function loadBookingForDownload(bookingId, userId) {
+  const booking = await Bookings.findById(bookingId).populate(
+    "flightId",
+    "flightNumber source destination departureTime arrivalTime price routes",
+  );
+
+  if (!booking) throw { status: 404, message: "Booking not found" };
+
+  if (String(booking.passengerId) !== String(userId)) {
+    throw { status: 403, message: "Not authorised" };
+  }
+
+  return booking;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  GET /api/bookings/:id/download/boarding-pass                              */
+/*  Returns a multi-page PDF — one boarding pass per passenger                */
+/* -------------------------------------------------------------------------- */
+export const downloadBoardingPass = async (req, res) => {
+  try {
+    const booking = await loadBookingForDownload(req.params.id, req.user._id);
+    const { boardingPasses } = await generateBookingPDFs(
+      booking,
+      booking.flightId,
+    );
+
+    // Merge all boarding pass pages into one PDF response
+    // Each Buffer is a valid single-page PDF — send the first passenger's
+    // if 1 passenger, otherwise send all as separate files via zip would be
+    // complex; instead we regenerate as a single multi-passenger PDF by
+    // sending them concatenated. For simplicity we send pass[0] for 1 pax
+    // and all individually named if multi — here we send pax 1 only and
+    // let the client call per-passenger index via query param.
+    const passengerIndex = Number(req.query.passenger ?? 0);
+    const pdf = boardingPasses[passengerIndex] ?? boardingPasses[0];
+    const passengerName =
+      booking.passengers[passengerIndex]?.name ?? "passenger";
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="boarding-pass-${passengerName.replace(/\s+/g, "-")}-${booking.bookingReference}.pdf"`,
+      "Content-Length": pdf.length,
+    });
+    res.end(pdf);
+  } catch (err) {
+    res
+      .status(err.status ?? 500)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*  GET /api/bookings/:id/download/ticket                                     */
+/* -------------------------------------------------------------------------- */
+export const downloadTicket = async (req, res) => {
+  try {
+    const booking = await loadBookingForDownload(req.params.id, req.user._id);
+    const { ticket } = await generateBookingPDFs(booking, booking.flightId);
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="e-ticket-${booking.bookingReference}.pdf"`,
+      "Content-Length": ticket.length,
+    });
+    res.end(ticket);
+  } catch (err) {
+    res
+      .status(err.status ?? 500)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*  GET /api/bookings/:id/download/invoice                                    */
+/* -------------------------------------------------------------------------- */
+export const downloadInvoice = async (req, res) => {
+  try {
+    const booking = await loadBookingForDownload(req.params.id, req.user._id);
+    const { invoice } = await generateBookingPDFs(booking, booking.flightId);
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="invoice-${booking.bookingReference}.pdf"`,
+      "Content-Length": invoice.length,
+    });
+    res.end(invoice);
+  } catch (err) {
+    res
+      .status(err.status ?? 500)
+      .json({ success: false, message: err.message });
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/*  GET /api/bookings/flight/:flightId  (admin)                               */
+/*  Full booking + passenger + user details for a specific flight.            */
+/* -------------------------------------------------------------------------- */
+export const getBookingsByFlightId = expressAsyncHandler(async (req, res) => {
+  try {
+    const { flightId } = req.params;
+    const { status, page = 1, limit = 20 } = req.query;
+
+    const query = { flightId };
+    if (status && status !== "all") query.status = status;
+
+    const total = await Bookings.countDocuments(query);
+
+    const bookings = await Bookings.find(query)
+      .populate({
+        path: "passengerId",
+        select: "name email phone role createdAt",
+      })
+      .populate({
+        path: "flightId",
+        select:
+          "flightNumber source destination departureTime arrivalTime status price totalSeats availableSeats",
+        populate: {
+          path: "aircraftId",
+          select: "registrationNumber model capacity",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
+
+    /* ── Flight-level booking stats ── */
+    const mongoose = (await import("mongoose")).default;
+    const fid = new mongoose.Types.ObjectId(flightId);
+
+    const [confirmed, cancelled, completed, revenueAgg] = await Promise.all([
+      Bookings.countDocuments({ flightId, status: "confirmed" }),
+      Bookings.countDocuments({ flightId, status: "cancelled" }),
+      Bookings.countDocuments({ flightId, status: "completed" }),
+      Bookings.aggregate([
+        { $match: { flightId: fid, paymentStatus: "paid" } },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      ]),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      totalPages: Math.ceil(total / Number(limit)),
+      stats: {
+        total,
+        confirmed,
+        cancelled,
+        completed,
+        revenue: revenueAgg[0]?.total || 0,
+      },
+      data: bookings,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});

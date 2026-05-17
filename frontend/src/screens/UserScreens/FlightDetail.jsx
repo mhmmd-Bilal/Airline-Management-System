@@ -1,5 +1,5 @@
 // src/pages/user/FlightDetail.jsx
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetFlightByIdQuery } from "../../slices/flightApiSlice";

@@ -35,6 +35,12 @@ const navItems = [
     icon: "ti-clock",
     path: "/attendance",
   },
+  {
+    id: "support",
+    label: "Support",
+    icon: "ti-clock",
+    path: "/support",
+  },
 ];
 
 const medicalCls = {

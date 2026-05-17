@@ -13,6 +13,7 @@ import crewRoutes from "./routes/crewRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import loyaltyRoutes from "./routes/loyaltyRoutes.js";
+import supportRoutes from "./routes/supportRoutes.js"
 
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
 
@@ -34,5 +35,6 @@ app.use("/api/crew", crewRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
+app.use("/api/support" , supportRoutes)
 
 app.listen(4000, () => console.log("Server Started"));

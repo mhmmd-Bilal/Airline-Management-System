@@ -5,10 +5,10 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../slices/authSlice";
 
 const NAV_LINKS = [
-  { label: "Home", to: "/" },
-  { label: "My Bookings", to: "/bookings" },
-  { label: "Deals", to: "/deals" },
-  { label: "Loyalty", to: "/loyalty" },
+  { label: "Home", to: "/", authRequired: false },
+  { label: "My Bookings", to: "/bookings", authRequired: true },
+  { label: "Deals", to: "/deals", authRequired: false },
+  { label: "Loyalty", to: "/loyalty", authRequired: true },
 ];
 
 // ── Logo ──────────────────────────────────────────────
@@ -68,14 +68,11 @@ function UserMenu({ userData, onLogout }) {
 
       {open && (
         <>
-          {/* backdrop */}
           <div
             className="fixed inset-0 z-[40]"
             onClick={() => setOpen(false)}
           />
-
           <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-100 rounded-2xl shadow-xl z-[50] overflow-hidden">
-            {/* User info header */}
             <div className="px-4 py-3 border-b border-slate-100 bg-[#F8FAFC]">
               <p className="text-[13px] font-bold text-[#0C3060] truncate">
                 {userData?.name}
@@ -85,7 +82,6 @@ function UserMenu({ userData, onLogout }) {
               </p>
             </div>
 
-            {/* Menu items */}
             {[
               {
                 label: "My Profile",
@@ -101,6 +97,11 @@ function UserMenu({ userData, onLogout }) {
                 label: "Loyalty Rewards",
                 icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z",
                 to: "/loyalty",
+              },
+              {
+                label: "Support",
+                icon: "M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z",
+                to: "/support",
               },
             ].map(({ label, icon, to }) => (
               <button
@@ -124,7 +125,6 @@ function UserMenu({ userData, onLogout }) {
               </button>
             ))}
 
-            {/* Divider + logout */}
             <div className="border-t border-slate-100">
               <button
                 onClick={() => {
@@ -172,15 +172,17 @@ export default function UserNavbar() {
   const isActive = (to) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
 
+  // ── Only show auth-required links when logged in ──
+  const visibleLinks = NAV_LINKS.filter((l) => !l.authRequired || !!userData);
+
   return (
     <>
       <nav className="bg-white border-b border-blue-100 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-        {/* Left — logo */}
         <Logo />
 
-        {/* Center — nav links (desktop) */}
+        {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-500">
-          {NAV_LINKS.map((l) => (
+          {visibleLinks.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -195,7 +197,7 @@ export default function UserNavbar() {
           ))}
         </div>
 
-        {/* Right — auth (desktop) */}
+        {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">
           {userData ? (
             <UserMenu userData={userData} onLogout={handleLogout} />
@@ -246,11 +248,10 @@ export default function UserNavbar() {
         </button>
       </nav>
 
-      {/* ── Mobile menu ── */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-white border-b border-blue-100 px-6 py-4 flex flex-col gap-1 z-40 relative">
-          {/* Nav links */}
-          {NAV_LINKS.map((l) => (
+          {visibleLinks.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -269,7 +270,6 @@ export default function UserNavbar() {
           <div className="border-t border-slate-100 mt-2 pt-3">
             {userData ? (
               <>
-                {/* User info */}
                 <div className="flex items-center gap-3 px-3 py-2 mb-2">
                   <div className="w-8 h-8 bg-[#0C3060] rounded-full flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0">
                     {userData?.name?.charAt(0).toUpperCase()}
@@ -287,7 +287,7 @@ export default function UserNavbar() {
                 {[
                   { label: "My Profile", to: "/profile" },
                   { label: "My Bookings", to: "/bookings" },
-                  { label: "Wallet", to: "/wallet" },
+                  { label: "Loyalty", to: "/loyalty" },
                 ].map(({ label, to }) => (
                   <Link
                     key={to}

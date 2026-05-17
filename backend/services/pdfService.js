@@ -459,8 +459,7 @@ async function buildInvoiceHtml(booking, flight) {
   const basePrice   = flight.price || 0;
   const farePerPax  = Math.round(basePrice * multiplier);
   const subtotal    = farePerPax * booking.passengerCount;
-  const gst         = Math.round(subtotal * 0.05);   // 5% GST on air travel in India
-  const total       = subtotal + gst;
+  const total       = booking.totalAmount;
   const invoiceNo   = `INV-${booking.bookingReference}`;
 
   const lineItems = booking.passengers
@@ -586,8 +585,7 @@ async function buildInvoiceHtml(booking, flight) {
 
   <!-- Totals -->
   <div class="totals">
-    <div class="totals-row"><span>Subtotal (${booking.passengerCount} × ₹${farePerPax.toLocaleString("en-IN")})</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
-    <div class="totals-row"><span>GST (5% on air fare)</span><span>₹${gst.toLocaleString("en-IN")}</span></div>
+    <div class="totals-row"><span>Total (${booking.passengerCount} × ₹${farePerPax.toLocaleString("en-IN")})</span><span>₹${subtotal.toLocaleString("en-IN")}</span></div>
     <div class="totals-divider"></div>
     <div class="totals-final"><span>Total Paid</span><span>₹${total.toLocaleString("en-IN")}</span></div>
   </div>

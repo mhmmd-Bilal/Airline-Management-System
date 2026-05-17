@@ -17,7 +17,7 @@ const router = express.Router();
 router.get("/search", searchFlights);
 router.get("/crew/:crewId", protect, getFlightsByCrewId); // ← before /:id
 router.get("/stats", protect, getFlightStats);
-router.get("/", protect, getAllFlights);
+router.get("/", getAllFlights);
 router.get("/:id", getFlightById);
 router.post("/", protect, adminOnly, createFlight);
 router.put("/:id", protect, adminOnly, updateFlight);

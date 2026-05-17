@@ -57,7 +57,7 @@ export const earnPoints = expressAsyncHandler(async (req, res) => {
   const pts = calculatePoints(amount, loyalty.tier);
   loyalty.addPoints(
     pts,
-    `Booking reward — ₹${amount.toLocaleString()} Added`,
+    `Booking reward — ₹${amount.toLocaleString()}`,
     bookingId,
   );
   await loyalty.save();
