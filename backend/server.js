@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import { createServer } from "http"; // ✅ add this
+
 import connectDb from "./config/db.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -13,9 +15,10 @@ import crewRoutes from "./routes/crewRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import loyaltyRoutes from "./routes/loyaltyRoutes.js";
-import supportRoutes from "./routes/supportRoutes.js"
+import supportRoutes from "./routes/supportRoutes.js";
 
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
+import { initSocket } from "./services/socketService.js";
 
 const app = express();
 
@@ -24,9 +27,16 @@ connectDb();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true,
+}));
 
 startFlightStatusCron();
+
+const httpServer = createServer(app);
+
+initSocket(httpServer);
 
 app.use("/api/user", userRoutes);
 app.use("/api/aircraft", aircraftRoutes);
@@ -35,6 +45,6 @@ app.use("/api/crew", crewRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
-app.use("/api/support" , supportRoutes)
+app.use("/api/support", supportRoutes);
 
-app.listen(4000, () => console.log("Server Started"));
+httpServer.listen(4000, () => console.log("Server Started"));
