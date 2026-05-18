@@ -6,6 +6,7 @@ import Notifications from "../models/notificationModel.js";
 import Refunds from "../models/refundModel.js";
 import { generateBookingPDFs } from "../services/pdfService.js";
 import { sendBookingEmail } from "../services/mailService.js";
+import { createNotification } from "./notificationController.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import dotenv from "dotenv";
@@ -39,7 +40,13 @@ export const getMyBookings = async (req, res) => {
 export const getBookingById = async (req, res) => {
   try {
     const booking = await Bookings.findById(req.params.id)
-      .populate("flightId")
+      .populate({
+        path: "flightId",
+        populate: {
+          path: "aircraftId",
+          model: "aircrafts",
+        },
+      })
       .populate("passengerId", "name email phone");
 
     if (!booking) {
@@ -243,6 +250,15 @@ export const verifyPayment = async (req, res) => {
       razorpaySignature,
     });
 
+    await createNotification({
+      recipient: req.user._id,
+      title: "Booking confirmed",
+      message: `Your booking ${booking.bookingReference} for ${flight.source} → ${flight.destination} is confirmed.`,
+      type: "booking",
+      relatedId: booking._id,
+      relatedModel: "bookings",
+    });
+
     let loyalty = await Loyalty.findOne();
 
     const populated = await booking.populate(
@@ -333,6 +349,15 @@ export const cancelBooking = async (req, res) => {
     booking.paymentStatus = "refunded";
 
     await booking.save();
+
+    await createNotification({
+      recipient: req.user._id,
+      title: "Booking cancelled",
+      message: `Your booking ${booking.bookingReference} has been cancelled. Refund will be processed shortly.`,
+      type: "refund",
+      relatedId: booking._id,
+      relatedModel: "bookings",
+    });
 
     // Restore seats
     await Flights.findByIdAndUpdate(flight._id, {

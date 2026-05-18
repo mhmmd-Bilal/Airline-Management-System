@@ -1,6 +1,7 @@
 // src/components/admin/AdminTopbar.jsx
 import { useLocation } from "react-router-dom";
 import Avatar from "./shared/Avatar";
+import NotificationBell from "../NotificationBell";
 
 const routeLabels = {
   "/":          "Overview",
@@ -39,7 +40,7 @@ export default function AdminTopbar({ onMenuClick, user }) {
       </div>
 
       <div className="flex items-center gap-2.5">
-        <IconBtn icon="ti-bell" label="Notifications" />
+        <NotificationBell theme="light" notifPath="/admin/notifications" />
         <IconBtn icon="ti-search" label="Search" />
         <Avatar name={user?.name || "Admin User"} size="md" />
       </div>

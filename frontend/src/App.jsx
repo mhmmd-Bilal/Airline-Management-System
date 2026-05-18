@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import LoginScreen from "./screens/LoginScreen";
 import HomeScreen from "./screens/HomeScreen";
@@ -15,6 +16,22 @@ import DealsPage from "./screens/UserScreens/DealsPage";
 import LoyaltyScreen from "./screens/UserScreens/LoyaltyScreen";
 import SupportPage from "./screens/UserScreens/SupportPage";
 import BookingDetails from "./screens/UserScreens/BookingDetails";
+import NotificationsPage from "./screens/NotificationPage";
+import { getSocket, disconnectSocket } from "./services/socketService";
+
+function SocketManager() {
+  const { userData } = useSelector((s) => s.auth);
+
+  useEffect(() => {
+    if (!userData) {
+      disconnectSocket();
+      return;
+    }
+    getSocket();
+  }, [userData]);
+
+  return null;
+}
 
 function App() {
   const { userData } = useSelector((state) => state.auth);
@@ -24,6 +41,7 @@ function App() {
 
   return (
     <>
+      <SocketManager />
       <ToastContainer
         position="bottom-center"
         autoClose={5000}
@@ -49,6 +67,10 @@ function App() {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loyalty" element={<LoyaltyScreen />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route
+          path="/notifications"
+          element={<NotificationsPage notifPath="/notifications" />}
+        />
       </Routes>
     </>
   );

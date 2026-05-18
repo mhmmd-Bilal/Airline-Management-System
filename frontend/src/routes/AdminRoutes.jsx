@@ -10,6 +10,7 @@ import SupportPage from "../screens/AdminScreens/AdminSupportPage";
 import SettingsPage from "../screens/AdminScreens/SettingsPage";
 import { ToastContainer } from "react-toastify";
 import FlightDetailPage from "../screens/AdminScreens/FlightDetailPage";
+import NotificationsPage from "../screens/NotificationPage";
 
 const adminPages = [
   { path: "/", element: <AdminDashboard /> },
@@ -42,6 +43,7 @@ export default function AdminRoutes() {
             {adminPages.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
+            <Route path="/admin/notifications" element={<NotificationsPage />} />
             <Route path="/flights/:id" element={<FlightDetailPage />} />
           </Route>
         </Route>

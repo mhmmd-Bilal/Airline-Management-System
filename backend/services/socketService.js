@@ -60,37 +60,42 @@ export function initSocket(httpServer) {
     }
   });
 
-  /* ── Connection handler ── */
   io.on("connection", (socket) => {
     const { _id, role, name } = socket.user;
     console.log(
       `[socket] connected  user=${name}  role=${role}  id=${socket.id}`,
     );
 
-    /* ── Join a ticket room ── */
-    /*
-     * Client emits: socket.emit("join_ticket", ticketId)
-     * Server joins: socket.join(`ticket:${ticketId}`)
-     *
-     * Only the ticket owner, admin, or crew can join.
-     * We trust the JWT role here; the REST API enforces ownership separately.
-     */
+    // ── Auto-join personal + role rooms ──────────────────────
+    socket.join(`user:${_id}`);
+    socket.join(`role:${role}`);
+    socket.join("role:all");
+
+    // ── Admins auto-join admin_feed ───────────────────────────
+    if (role === "admin") {
+      socket.join("admin_feed");
+      console.log(`[socket] ${name} auto-joined admin_feed`);
+    }
+
+    // ── Join ticket room ──────────────────────────────────────
     socket.on("join_ticket", (ticketId) => {
       if (!ticketId) return;
       const room = `ticket:${ticketId}`;
       socket.join(room);
-      console.log(`[socket] ${name} joined room ${room}`);
+      const size = io.sockets.adapter.rooms.get(room)?.size ?? 0;
+      console.log(
+        `[socket] ${name} (${role}) joined ${room} — members: ${size}`,
+      );
     });
 
-    /* ── Leave a ticket room ── */
+    // ── Leave ticket room ─────────────────────────────────────
     socket.on("leave_ticket", (ticketId) => {
       if (!ticketId) return;
-      const room = `ticket:${ticketId}`;
-      socket.leave(room);
-      console.log(`[socket] ${name} left room ${room}`);
+      socket.leave(`ticket:${ticketId}`);
+      console.log(`[socket] ${name} left ticket:${ticketId}`);
     });
 
-    /* ── Typing indicator ── */
+    // ── Typing indicator ──────────────────────────────────────
     socket.on("typing", ({ ticketId, isTyping }) => {
       socket.to(`ticket:${ticketId}`).emit("user_typing", {
         userId: _id,
@@ -109,6 +114,30 @@ export function initSocket(httpServer) {
   return io;
 }
 
+export function emitNotification(notification) {
+  if (!io) return;
+
+  const payload = {
+    _id: String(notification._id),
+    title: notification.title,
+    message: notification.message,
+    type: notification.type,
+    isRead: false,
+    relatedId: notification.relatedId ?? null,
+    relatedModel: notification.relatedModel ?? null,
+    createdAt: notification.createdAt ?? new Date(),
+  };
+
+  if (notification.recipient) {
+    io.to(`user:${notification.recipient}`).emit("notification", payload);
+  } else {
+    io.to(`role:${notification.roleTarget ?? "all"}`).emit(
+      "notification",
+      payload,
+    );
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /*                            EMIT HELPERS                                    */
 /* -------------------------------------------------------------------------- */
@@ -122,7 +151,10 @@ export function initSocket(httpServer) {
  */
 export function emitNewMessage(ticketId, message, ticket) {
   if (!io) return;
-  io.to(`ticket:${ticketId}`).emit("new_message", {
+  const room = `ticket:${ticketId}`;
+  const members = io.sockets.adapter.rooms.get(room)?.size ?? 0;
+  console.log(`[socket] emitNewMessage → ${room}  members=${members}`);
+  io.to(room).emit("new_message", {
     ticketId,
     message,
     unreadByAdmin: ticket.unreadByAdmin,

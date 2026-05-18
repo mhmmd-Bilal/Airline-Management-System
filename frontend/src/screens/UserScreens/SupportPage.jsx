@@ -166,11 +166,23 @@ function TicketThread({ ticketId, onBack }) {
   // ── Socket ────────────────────────────────────────────
   useEffect(() => {
     if (!ticketId) return;
+
     const socket = getSocket();
+
+    // join now (or queued if connecting)
     joinTicketRoom(ticketId);
     setOnline(socket.connected);
 
-    socket.on("new_message", ({ ticketId: tId, message }) => {
+    const handleConnect = () => {
+      setOnline(true);
+      // re-join after reconnection
+      socket.emit("join_ticket", ticketId);
+      console.log("[socket] re-joined after reconnect:", ticketId);
+    };
+    const handleDisconnect = () => setOnline(false);
+
+    const handleNewMessage = ({ ticketId: tId, message }) => {
+      console.log("[socket] new_message received:", tId);
       if (tId !== ticketId) return;
       setMessages((prev) => {
         const exists = prev.some(
@@ -180,26 +192,32 @@ function TicketThread({ ticketId, onBack }) {
       });
       setNewFlash(true);
       setTimeout(() => setNewFlash(false), 2000);
-    });
-    socket.on("ticket_updated", ({ ticketId: tId }) => {
+    };
+
+    const handleTicketUpdated = ({ ticketId: tId }) => {
       if (tId === ticketId) refetch();
-    });
-    socket.on("user_typing", ({ userId, name, isTyping }) => {
+    };
+
+    const handleTyping = ({ userId, name, isTyping }) => {
       if (String(userId) === String(userData?._id)) return;
       setTyping(isTyping ? name : null);
-    });
-    socket.on("connect", () => setOnline(true));
-    socket.on("disconnect", () => setOnline(false));
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("new_message", handleNewMessage);
+    socket.on("ticket_updated", handleTicketUpdated);
+    socket.on("user_typing", handleTyping);
 
     return () => {
       leaveTicketRoom(ticketId);
-      socket.off("new_message");
-      socket.off("ticket_updated");
-      socket.off("user_typing");
-      socket.off("connect");
-      socket.off("disconnect");
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("new_message", handleNewMessage);
+      socket.off("ticket_updated", handleTicketUpdated);
+      socket.off("user_typing", handleTyping);
     };
-  }, [ticketId, userData?._id]);
+  }, [ticketId]); // only ticketId — userData._id causes unnecessary remounts
 
   const handleReplyChange = (val) => {
     setReply(val);

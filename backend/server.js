@@ -16,6 +16,7 @@ import attendanceRoutes from "./routes/attendanceRoutes.js";
 import bookingRoutes from "./routes/bookingRoutes.js";
 import loyaltyRoutes from "./routes/loyaltyRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
 import { initSocket } from "./services/socketService.js";
@@ -27,10 +28,12 @@ connectDb();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true,
+  }),
+);
 
 startFlightStatusCron();
 
@@ -46,5 +49,6 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 httpServer.listen(4000, () => console.log("Server Started"));

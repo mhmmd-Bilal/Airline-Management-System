@@ -8,6 +8,7 @@ import CrewProfile from "../screens/CrewScreens/CrewProfile";
 import CrewMedical from "../screens/CrewScreens/CrewMedical";
 import CrewSupportPage from "../screens/CrewScreens/CrewSupportPage";
 import CrewFlightDetails from "../screens/CrewScreens/CrewFlightDetails";
+import NotificationsPage from "../screens/NotificationPage";
 
 export default function CrewRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function CrewRoutes() {
           <Route path="/medical" element={<CrewMedical />} />
           <Route path="/attendance" element={<CrewAttendance />} />
           <Route path="/support" element={<CrewSupportPage />} />
+          <Route path="/crew/notifications" element={<NotificationsPage />} />
           <Route path="/crew/flights/:id" element={<CrewFlightDetails />} />
         </Route>
       </Route>

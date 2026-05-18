@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../slices/authSlice";
+import NotificationBell from "./NotificationBell";
 
 const NAV_LINKS = [
   { label: "Home", to: "/", authRequired: false },
@@ -200,7 +201,12 @@ export default function UserNavbar() {
         {/* Desktop auth */}
         <div className="hidden md:flex items-center gap-3">
           {userData ? (
-            <UserMenu userData={userData} onLogout={handleLogout} />
+            <>
+              {userData && (
+                <NotificationBell theme="light" notifPath="/notifications" />
+              )}
+              <UserMenu userData={userData} onLogout={handleLogout} />
+            </>
           ) : (
             <>
               <button

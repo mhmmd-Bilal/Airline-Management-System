@@ -196,6 +196,7 @@ export const createFlight = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const updateFlight = expressAsyncHandler(async (req, res) => {
   const flight = await Flights.findById(req.params.id);
+  const previousStatus = flight.status;
   if (!flight) {
     return res
       .status(404)
@@ -320,6 +321,17 @@ export const updateFlight = expressAsyncHandler(async (req, res) => {
         },
       },
     );
+  }
+
+  if (updated.status === "boarding" && previousStatus !== "boarding") {
+    await createNotification({
+      roleTarget: "passenger", // broadcast to all passengers
+      title: "Flight boarding",
+      message: `Flight ${updated.flightNumber} (${updated.source} → ${updated.destination}) is now boarding.`,
+      type: "flight",
+      relatedId: updated._id,
+      relatedModel: "flights",
+    });
   }
 
   const populated = await updated.populate([

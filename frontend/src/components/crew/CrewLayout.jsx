@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useGetTodayAttendanceQuery } from "../../slices/attendanceApiSlice";
 import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
+import NotificationBell from "../NotificationBell";
 
 const navItems = [
   {
@@ -233,10 +234,7 @@ export default function CrewLayout() {
               label={crew?.currentStatus}
               cls="bg-blue-100 text-blue-800"
             />
-            <button className="w-9 h-9 rounded-lg border border-[#D0E6F7] bg-[#F0F7FF] flex items-center justify-center text-[#1565C0] hover:bg-[#E1EFFE] transition relative cursor-pointer">
-              <i className="ti ti-bell text-[17px]" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full" />
-            </button>
+            <NotificationBell theme="light" notifPath="/crew/notifications" />
             <Avatar name={name} size="sm" />
           </div>
         </div>

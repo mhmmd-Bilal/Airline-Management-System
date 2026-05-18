@@ -431,6 +431,35 @@ export default function BookingDetails() {
             </p>
           </div>
         )}
+
+        {/* Refund Information */}
+        {booking.paymentStatus === "refunded" && (
+          <div className="mt-6 bg-green-50 border border-green-100 rounded-3xl p-6">
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-green-700 font-black text-xl mb-2">
+                  Refund Successfully Processed
+                </h3>
+
+                <p className="text-green-600 text-sm leading-relaxed">
+                  Your booking cancellation has been completed successfully. The
+                  refunded amount has been initiated to your original payment
+                  method.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-2xl px-5 py-4 border border-green-100 min-w-[180px]">
+                <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">
+                  Refunded Amount
+                </p>
+
+                <p className="text-3xl font-black text-[#0C3060]">
+                  ₹{booking.totalAmount}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {cancelTarget && (

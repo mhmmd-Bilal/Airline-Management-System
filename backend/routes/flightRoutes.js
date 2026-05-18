@@ -22,7 +22,7 @@ router.get("/stats", protect, getFlightStats);
 router.get("/", getAllFlights);
 router.get("/:id", getFlightById);
 router.post("/", protect, adminOnly, createFlight);
-router.put("/:id", protect, adminOnly, updateFlight);
+router.put("/:id", protect, updateFlight);
 router.delete("/:id", protect, adminOnly, deleteFlight);
 
 export default router;
