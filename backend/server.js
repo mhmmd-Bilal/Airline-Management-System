@@ -17,6 +17,8 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import loyaltyRoutes from "./routes/loyaltyRoutes.js";
 import supportRoutes from "./routes/supportRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import revenueRoutes from "./routes/revenueRoutes.js";
+
 
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
 import { initSocket } from "./services/socketService.js";
@@ -49,6 +51,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/loyalty", loyaltyRoutes);
 app.use("/api/support", supportRoutes);
+app.use("/api/revenue", revenueRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 httpServer.listen(4000, () => console.log("Server Started"));
