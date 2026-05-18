@@ -45,64 +45,6 @@ const fmt = (dt) =>
 /*                           CANCEL MODAL                                     */
 /* -------------------------------------------------------------------------- */
 
-function CancelModal({ booking, onClose, onConfirm, loading }) {
-  const [reason, setReason] = useState("");
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-5 h-5 text-red-500"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-bold text-[#0C3060]">Cancel booking?</p>
-            <p className="text-[12px] text-slate-400">
-              {booking.bookingReference}
-            </p>
-          </div>
-        </div>
-        <p className="text-[13px] text-slate-500 mb-4 leading-relaxed">
-          This will cancel your booking for{" "}
-          <span className="font-semibold text-[#0C3060]">
-            {booking.flightId?.source} → {booking.flightId?.destination}
-          </span>
-          . A refund will be initiated to your original payment method.
-        </p>
-        <textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason for cancellation (optional)"
-          className="w-full h-20 px-3 py-2 text-[13px] text-[#0C3060] bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#0C3060] resize-none mb-4"
-        />
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 h-10 border border-slate-200 bg-white text-slate-600 rounded-xl text-[13px] font-semibold cursor-pointer hover:bg-slate-50 transition"
-          >
-            Keep booking
-          </button>
-          <button
-            onClick={() => onConfirm(reason)}
-            disabled={loading}
-            className="flex-1 h-10 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[13px] font-bold border-none cursor-pointer disabled:opacity-60 transition"
-          >
-            {loading ? "Cancelling..." : "Yes, cancel"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* -------------------------------------------------------------------------- */
 /*                        DOWNLOAD DROPDOWN                                   */
@@ -343,24 +285,14 @@ export default function MyBookings() {
   const store = useSelector((s) => s);
   const getState = () => store;
 
-  const [cancelTarget, setCancelTarget] = useState(null);
   const [filter, setFilter] = useState("all");
 
   const { data, isLoading, isError } = useGetMyBookingsQuery();
-  const [cancelBooking, { isLoading: cancelling }] = useCancelBookingMutation();
 
   const bookings = (data?.data ?? []).filter((b) =>
     filter === "all" ? true : b.status === filter,
   );
 
-  const handleCancel = async (reason) => {
-    try {
-      await cancelBooking({ id: cancelTarget._id, reason }).unwrap();
-      setCancelTarget(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -541,15 +473,6 @@ export default function MyBookings() {
                       {canDownload && (
                         <DownloadDropdown booking={b} getState={getState} />
                       )}
-
-                      {canCancel && (
-                        <button
-                          onClick={() => setCancelTarget(b)}
-                          className="h-9 px-4 border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-[12px] font-semibold cursor-pointer transition"
-                        >
-                          Cancel booking
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -558,15 +481,6 @@ export default function MyBookings() {
           </div>
         )}
       </div>
-
-      {cancelTarget && (
-        <CancelModal
-          booking={cancelTarget}
-          onClose={() => setCancelTarget(null)}
-          onConfirm={handleCancel}
-          loading={cancelling}
-        />
-      )}
     </div>
   );
 }

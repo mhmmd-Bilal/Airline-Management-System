@@ -14,6 +14,7 @@ import UserProfile from "./screens/UserScreens/UserProfile";
 import DealsPage from "./screens/UserScreens/DealsPage";
 import LoyaltyScreen from "./screens/UserScreens/LoyaltyScreen";
 import SupportPage from "./screens/UserScreens/SupportPage";
+import BookingDetails from "./screens/UserScreens/BookingDetails";
 
 function App() {
   const { userData } = useSelector((state) => state.auth);
@@ -43,6 +44,7 @@ function App() {
         <Route path="/flights/:id" element={<FlightDetail />} />
         <Route path="/booking-success/:id" element={<BookingSuccess />} />
         <Route path="/bookings" element={<MyBookings />} />
+        <Route path="/bookings/:id" element={<BookingDetails />} />
         <Route path="/deals" element={<DealsPage />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/loyalty" element={<LoyaltyScreen />} />

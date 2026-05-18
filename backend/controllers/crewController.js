@@ -4,6 +4,24 @@ import Users from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import expressAsyncHandler from "express-async-handler";
 
+// ── @desc    Get the logged-in crew member's own profile
+// ── @route   GET /api/crew/me
+// ── @access  Crew
+export const getMyCrewProfile = expressAsyncHandler(async (req, res) => {
+  const crew = await Crews.findOne({ userId: req.user._id }).populate(
+    "userId",
+    "name email phone role",
+  );
+
+  if (!crew) {
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew profile not found for this user" });
+  }
+
+  res.status(200).json({ success: true, data: crew });
+});
+
 // ── @desc    Get all crew with populated user data
 // ── @route   GET /api/crew
 // ── @access  Admin
@@ -53,7 +71,6 @@ export const getAllCrew = expressAsyncHandler(async (req, res) => {
   });
 });
 
-// controllers/crewController.js — add this
 // ── @desc    Get crew profile by User _id
 // ── @route   GET /api/crew/by-user/:userId
 // ── @access  Crew / Admin
@@ -120,25 +137,11 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
   let createdUser = null;
 
   const {
-    name,
-    email,
-    phone,
-    password,
-    employeeId,
-    role,
-    experience,
-    licenseNumber,
-    licenseExpiry,
-    nationality,
-    dateOfBirth,
-    currentStatus,
-    salary,
-    medicalStatus,
-    medicalLastChecked,
-    medicalNextDue,
+    name, email, phone, password, employeeId, role, experience,
+    licenseNumber, licenseExpiry, nationality, dateOfBirth,
+    currentStatus, salary, medicalStatus, medicalLastChecked, medicalNextDue,
   } = req.body;
 
-  // ── Required field validation ──
   if (!name || !email || !phone || !password || !employeeId || !role) {
     return res.status(400).json({
       success: false,
@@ -146,127 +149,70 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
     });
   }
 
-  // ── Duplicate checks ──
   const [emailExists, employeeIdExists] = await Promise.all([
     Users.findOne({ email }),
     Crews.findOne({ employeeId }),
   ]);
 
-  if (emailExists) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Email already registered" });
-  }
-
-  if (employeeIdExists) {
-    return res.status(400).json({
-      success: false,
-      message: `Employee ID ${employeeId} already exists`,
-    });
-  }
+  if (emailExists)
+    return res.status(400).json({ success: false, message: "Email already registered" });
+  if (employeeIdExists)
+    return res.status(400).json({ success: false, message: `Employee ID ${employeeId} already exists` });
 
   try {
-    // ── Create User ──
     const hashedPassword = await bcrypt.hash(password, 10);
+    createdUser = await Users.create({ name, email, phone, password: hashedPassword, role: "crew" });
 
-    console.log(email);
-
-    createdUser = await Users.create({
-      name,
-      email,
-      phone,
-      password: hashedPassword,
-      role: "crew",
-    });
-
-    // ── Create Crew profile ──
     const crew = await Crews.create({
       userId: createdUser._id,
-      employeeId,
-      role,
-      experience: experience || 0,
-      licenseNumber: licenseNumber || null,
-      licenseExpiry: licenseExpiry || null,
-      nationality: nationality || null,
-      dateOfBirth: dateOfBirth || null,
-      currentStatus: currentStatus || "Available",
-      salary: salary || null,
-      medicalStatus: medicalStatus || "Fit",
+      employeeId, role,
+      experience:         experience         || 0,
+      licenseNumber:      licenseNumber      || null,
+      licenseExpiry:      licenseExpiry      || null,
+      nationality:        nationality        || null,
+      dateOfBirth:        dateOfBirth        || null,
+      currentStatus:      currentStatus      || "Available",
+      salary:             salary             || null,
+      medicalStatus:      medicalStatus      || "Fit",
       medicalLastChecked: medicalLastChecked || null,
-      medicalNextDue: medicalNextDue || null,
+      medicalNextDue:     medicalNextDue     || null,
     });
 
     const populated = await crew.populate("userId", "name email phone role");
-
     res.status(201).json({ success: true, data: populated });
   } catch (error) {
-    // ── Manual rollback: delete user if crew creation failed ──
-    if (createdUser) {
-      await Users.findByIdAndDelete(createdUser._id).catch(() => {});
-    }
+    if (createdUser) await Users.findByIdAndDelete(createdUser._id).catch(() => {});
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ── @desc    Update crew member (updates both User + Crew)
+// ── @desc    Update crew member
 // ── @route   PUT /api/crew/:id
 // ── @access  Admin
 export const updateCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
-  if (!crew) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Crew member not found" });
-  }
+  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
 
   const user = await Users.findById(crew.userId);
-  if (!user) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Associated user not found" });
-  }
+  if (!user) return res.status(404).json({ success: false, message: "Associated user not found" });
 
   const {
-    name,
-    email,
-    phone,
-    password,
-    employeeId,
-    role,
-    experience,
-    licenseNumber,
-    licenseExpiry,
-    nationality,
-    dateOfBirth,
-    currentStatus,
-    salary,
-    medicalStatus,
-    medicalLastChecked,
-    medicalNextDue,
+    name, email, phone, password, employeeId, role, experience,
+    licenseNumber, licenseExpiry, nationality, dateOfBirth,
+    currentStatus, salary, medicalStatus, medicalLastChecked, medicalNextDue,
   } = req.body;
 
-  // ── Duplicate checks only if values are changing ──
   if (email && email !== user.email) {
     const emailExists = await Users.findOne({ email });
-    if (emailExists) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already in use" });
-    }
+    if (emailExists) return res.status(400).json({ success: false, message: "Email already in use" });
   }
 
   if (employeeId && employeeId !== crew.employeeId) {
     const empExists = await Crews.findOne({ employeeId });
-    if (empExists) {
-      return res.status(400).json({
-        success: false,
-        message: `Employee ID ${employeeId} already exists`,
-      });
-    }
+    if (empExists) return res.status(400).json({ success: false, message: `Employee ID ${employeeId} already exists` });
   }
 
-  // ── Update User ──
-  user.name = name ?? user.name;
+  user.name  = name  ?? user.name;
   user.email = email ?? user.email;
   user.phone = phone ?? user.phone;
   if (password && password.trim().length >= 6) {
@@ -274,23 +220,21 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
   }
   await user.save();
 
-  // ── Update Crew ──
-  crew.employeeId = employeeId ?? crew.employeeId;
-  crew.role = role ?? crew.role;
-  crew.experience = experience ?? crew.experience;
-  crew.licenseNumber = licenseNumber ?? crew.licenseNumber;
-  crew.licenseExpiry = licenseExpiry ?? crew.licenseExpiry;
-  crew.nationality = nationality ?? crew.nationality;
-  crew.dateOfBirth = dateOfBirth ?? crew.dateOfBirth;
-  crew.currentStatus = currentStatus ?? crew.currentStatus;
-  crew.salary = salary ?? crew.salary;
-  crew.medicalStatus = medicalStatus ?? crew.medicalStatus;
+  crew.employeeId         = employeeId         ?? crew.employeeId;
+  crew.role               = role               ?? crew.role;
+  crew.experience         = experience         ?? crew.experience;
+  crew.licenseNumber      = licenseNumber      ?? crew.licenseNumber;
+  crew.licenseExpiry      = licenseExpiry      ?? crew.licenseExpiry;
+  crew.nationality        = nationality        ?? crew.nationality;
+  crew.dateOfBirth        = dateOfBirth        ?? crew.dateOfBirth;
+  crew.currentStatus      = currentStatus      ?? crew.currentStatus;
+  crew.salary             = salary             ?? crew.salary;
+  crew.medicalStatus      = medicalStatus      ?? crew.medicalStatus;
   crew.medicalLastChecked = medicalLastChecked ?? crew.medicalLastChecked;
-  crew.medicalNextDue = medicalNextDue ?? crew.medicalNextDue;
+  crew.medicalNextDue     = medicalNextDue     ?? crew.medicalNextDue;
 
-  const updated = await crew.save();
+  const updated   = await crew.save();
   const populated = await updated.populate("userId", "name email phone role");
-
   res.status(200).json({ success: true, data: populated });
 });
 
@@ -299,8 +243,8 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
   const { currentStatus } = req.body;
-
   const allowed = ["Available", "On Duty", "Off Duty", "On Leave"];
+
   if (!allowed.includes(currentStatus)) {
     return res.status(400).json({
       success: false,
@@ -314,11 +258,7 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
     { new: true },
   ).populate("userId", "name email phone role");
 
-  if (!crew) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Crew member not found" });
-  }
+  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
 
   res.status(200).json({ success: true, data: crew });
 });
@@ -328,11 +268,7 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const deleteCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
-  if (!crew) {
-    return res
-      .status(404)
-      .json({ success: false, message: "Crew member not found" });
-  }
+  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
 
   if (crew.currentStatus === "On Duty") {
     return res.status(400).json({
@@ -342,8 +278,5 @@ export const deleteCrew = expressAsyncHandler(async (req, res) => {
   }
 
   await Promise.all([crew.deleteOne(), Users.findByIdAndDelete(crew.userId)]);
-
-  res
-    .status(200)
-    .json({ success: true, message: "Crew member deleted successfully" });
+  res.status(200).json({ success: true, message: "Crew member deleted successfully" });
 });

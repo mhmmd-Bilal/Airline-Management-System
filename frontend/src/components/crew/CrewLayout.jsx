@@ -38,7 +38,7 @@ const navItems = [
   {
     id: "support",
     label: "Support",
-    icon: "ti-clock",
+    icon: "ti-headset",
     path: "/support",
   },
 ];

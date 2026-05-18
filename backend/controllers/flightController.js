@@ -401,7 +401,6 @@ export const getFlightsByCrewId = expressAsyncHandler(async (req, res) => {
   });
 });
 
-// add to flightController.js
 // ── GET /api/flights/search ────────────────────────────
 export const searchFlights = async (req, res) => {
   try {
@@ -446,3 +445,26 @@ export const searchFlights = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getBookedFlights = expressAsyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const bookings = await Bookings.find({
+    passengerId: userId,
+  });
+
+  // remove duplicates
+  const flightIds = [
+    ...new Set(bookings.map((booking) => booking.flightId.toString())),
+  ];
+
+  const flights = await Flights.find({
+    _id: { $in: flightIds },
+  });
+
+  res.status(200).json({
+    success: true,
+    count: flights.length,
+    data: flights,
+  });
+});

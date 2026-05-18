@@ -58,15 +58,27 @@ const generateFlightNumber = (registrationNumber) => {
 const fmt = (dt) =>
   dt
     ? new Date(dt).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
         day: "2-digit",
         month: "short",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
       })
     : "—";
 
-const fmtInput = (dt) => (dt ? new Date(dt).toISOString().slice(0, 16) : "");
+const fmtInput = (dt) => {
+  if (!dt) return "";
+
+  const date = new Date(dt);
+
+  const offset = date.getTimezoneOffset();
+
+  const local = new Date(date.getTime() - offset * 60000);
+
+  return local.toISOString().slice(0, 16);
+};
 
 const inputCls =
   "w-full h-[42px] px-3 text-[13px] text-[#0D1B2A] bg-[#F0F7FF] border border-[#D0E6F7] rounded-[10px] outline-none focus:border-[#1565C0] focus:shadow-[0_0_0_3px_rgba(21,101,192,0.1)] transition placeholder:text-[#B0C4D8]";

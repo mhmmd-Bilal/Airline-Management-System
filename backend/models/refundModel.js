@@ -12,11 +12,6 @@ const refundSchema = new mongoose.Schema(
       ref: "bookings",
       required: true,
     },
-    paymentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "payments",
-      required: true,
-    },
     amount: {
       type: Number,
       required: true,

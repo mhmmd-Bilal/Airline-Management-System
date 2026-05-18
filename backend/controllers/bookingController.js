@@ -2,6 +2,8 @@
 import Bookings from "../models/bookingModel.js";
 import Flights from "../models/flightsModel.js";
 import Loyalty from "../models/loyaltyModel.js";
+import Notifications from "../models/notificationModel.js";
+import Refunds from "../models/refundModel.js";
 import { generateBookingPDFs } from "../services/pdfService.js";
 import { sendBookingEmail } from "../services/mailService.js";
 import Razorpay from "razorpay";
@@ -314,8 +316,10 @@ export const cancelBooking = async (req, res) => {
     }
 
     const flight = booking.flightId;
+
     const hoursUntilDeparture =
       (new Date(flight.departureTime) - Date.now()) / 3600000;
+
     if (hoursUntilDeparture < 2) {
       return res.status(400).json({
         success: false,
@@ -323,19 +327,63 @@ export const cancelBooking = async (req, res) => {
       });
     }
 
+    // Update booking
     booking.status = "cancelled";
-    booking.cancellationReason = req.body.reason || "Cancelled by passenger";
     booking.cancelledAt = new Date();
     booking.paymentStatus = "refunded";
+
     await booking.save();
 
+    // Restore seats
     await Flights.findByIdAndUpdate(flight._id, {
       $inc: { availableSeats: booking.passengerCount },
     });
 
-    res.status(200).json({ success: true, data: booking });
+    // Create refund entry
+    const refund = await Refunds.create({
+      passengerId: booking.passengerId,
+      bookingId: booking._id,
+      amount: booking.totalAmount,
+      reason: booking.cancellationReason,
+      status: "processed",
+      processedAt: new Date(),
+    });
+
+    // Passenger notification
+    await Notifications.create({
+      recipient: booking.passengerId,
+      roleTarget: "passenger",
+      title: "Refund Processed",
+      message: `Refund of ₹${booking.totalAmount} has been processed for booking ${booking.bookingReference}`,
+      type: "refund",
+      relatedId: refund._id,
+      relatedModel: "refunds",
+    });
+
+    // Admin notification
+    await Notifications.create({
+      roleTarget: "admin",
+      title: "Booking Cancelled",
+      message: `${booking.bookingReference} has been cancelled and refunded.`,
+      type: "refund",
+      relatedId: refund._id,
+      relatedModel: "refunds",
+      sentBy: booking.passengerId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled and refund processed",
+      data: {
+        booking,
+        refund,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

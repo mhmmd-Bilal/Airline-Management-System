@@ -62,8 +62,6 @@ const bookingSchema = new mongoose.Schema(
     razorpayOrderId:   { type: String },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
-    boardingPass:      { type: String },
-    cancellationReason:{ type: String },
     cancelledAt:       { type: Date },
   },
   { timestamps: true }

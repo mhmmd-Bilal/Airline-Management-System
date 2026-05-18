@@ -7,7 +7,8 @@ import {
   deleteFlight,
   getFlightStats,
   getFlightsByCrewId,
-  searchFlights
+  searchFlights,
+  getBookedFlights,
 } from "../controllers/flightController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
@@ -15,7 +16,8 @@ const router = express.Router();
 
 // routes/flightRoutes.js
 router.get("/search", searchFlights);
-router.get("/crew/:crewId", protect, getFlightsByCrewId); // ← before /:id
+router.get("/crew/:crewId", protect, getFlightsByCrewId);
+router.get("/my-booked-flights", protect, getBookedFlights);
 router.get("/stats", protect, getFlightStats);
 router.get("/", getAllFlights);
 router.get("/:id", getFlightById);

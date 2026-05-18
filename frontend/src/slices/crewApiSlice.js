@@ -1,9 +1,17 @@
+// slices/crewApiSlice.js
 import { apiSlice } from "./apiSlice";
 
 const CREW_URL = "/api/crew";
 
 const crewApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+
+    // GET /api/crew/me — logged-in crew member's own profile (no param needed)
+    getMyCrewProfile: builder.query({
+      query: () => ({ url: `${CREW_URL}/me` }),
+      providesTags: ["Crew"],
+    }),
+
     // GET /api/crew?role=&currentStatus=&medicalStatus=&search=&page=&limit=
     getAllCrew: builder.query({
       query: ({
@@ -26,23 +34,19 @@ const crewApiSlice = apiSlice.injectEndpoints({
       providesTags: ["Crew"],
     }),
 
-    // GET /api/crew/:id
+    // GET /api/crew/by-user/:userId
     getCrewByUserId: builder.query({
       query: (userId) => ({ url: `${CREW_URL}/by-user/${userId}` }),
       providesTags: ["Crew"],
     }),
 
-    // POST /api/crew — creates User + Crew in one call
+    // POST /api/crew
     createCrew: builder.mutation({
-      query: (data) => ({
-        url: CREW_URL,
-        method: "POST",
-        body: data,
-      }),
+      query: (data) => ({ url: CREW_URL, method: "POST", body: data }),
       invalidatesTags: ["Crew"],
     }),
 
-    // PUT /api/crew/:id — updates User + Crew in one call
+    // PUT /api/crew/:id
     updateCrew: builder.mutation({
       query: ({ id, ...data }) => ({
         url: `${CREW_URL}/${id}`,
@@ -52,7 +56,7 @@ const crewApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Crew"],
     }),
 
-    // PATCH /api/crew/:id/status — lightweight status update
+    // PATCH /api/crew/:id/status
     updateCrewStatus: builder.mutation({
       query: ({ id, currentStatus }) => ({
         url: `${CREW_URL}/${id}/status`,
@@ -62,23 +66,21 @@ const crewApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Crew"],
     }),
 
-    // DELETE /api/crew/:id — deletes User + Crew
+    // DELETE /api/crew/:id
     deleteCrew: builder.mutation({
-      query: (id) => ({
-        url: `${CREW_URL}/${id}`,
-        method: "DELETE",
-      }),
+      query: (id) => ({ url: `${CREW_URL}/${id}`, method: "DELETE" }),
       invalidatesTags: ["Crew"],
     }),
   }),
 });
 
 export const {
+  useGetMyCrewProfileQuery,      // ← new
   useGetAllCrewQuery,
   useGetCrewStatsQuery,
+  useGetCrewByUserIdQuery,
   useCreateCrewMutation,
   useUpdateCrewMutation,
   useUpdateCrewStatusMutation,
   useDeleteCrewMutation,
-  useGetCrewByUserIdQuery
 } = crewApiSlice;

@@ -14,6 +14,10 @@ import {
   leaveTicketRoom,
   emitTyping,
 } from "../../services/socketService";
+import {
+  useGetAllFlightsQuery,
+  useGetBookedFlightsQuery,
+} from "../../slices/flightApiSlice";
 
 // ── Constants ──────────────────────────────────────────
 const CATEGORIES = [
@@ -500,13 +504,33 @@ function NewTicketForm({ onSuccess, onCancel }) {
     description: "",
     category: "general",
     priority: "medium",
+    flightId: "", // ← added
   });
   const [errors, setErrors] = useState({});
   const [createTicket, { isLoading }] = useCreateTicketMutation();
 
+  const { data: flightData, isLoading: flightsLoading } =
+    useGetBookedFlightsQuery({ skip: form.category !== "flight" });
+
+  const flights = flightData?.data;
+
+  // const flights = (flightData?.data ?? []).filter((flight) =>
+  //   ["boarding", "in-flight", "scheduled"].includes(flight.status),
+  // );
+
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
     setErrors((p) => ({ ...p, [k]: undefined }));
+  };
+
+  // when category changes away from flight, clear flightId
+  const setCategory = (c) => {
+    setForm((p) => ({
+      ...p,
+      category: c,
+      flightId: c !== "flight" ? "" : p.flightId,
+    }));
+    setErrors((p) => ({ ...p, category: undefined }));
   };
 
   const validate = () => {
@@ -525,6 +549,7 @@ function NewTicketForm({ onSuccess, onCancel }) {
         description: form.description.trim(),
         category: form.category,
         priority: form.priority,
+        flightId: form.flightId || undefined, // ← added
       }).unwrap();
       onSuccess();
     } catch (err) {
@@ -564,7 +589,7 @@ function NewTicketForm({ onSuccess, onCancel }) {
               return (
                 <button
                   key={c}
-                  onClick={() => set("category", c)}
+                  onClick={() => setCategory(c)} // ← use setCategory
                   className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-semibold border transition cursor-pointer
                     ${
                       form.category === c
@@ -602,6 +627,80 @@ function NewTicketForm({ onSuccess, onCancel }) {
           </div>
         </div>
       </div>
+
+      {/* ── Flight picker — only when category === "flight" ── */}
+      {form.category === "flight" && (
+        <div className="mb-4">
+          <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+            Related flight
+          </label>
+          {flightsLoading ? (
+            <div className="h-11 bg-slate-50 border border-slate-200 rounded-xl flex items-center px-3 gap-2 text-[12px] text-slate-400">
+              <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-[#0C3060] rounded-full animate-spin" />
+              Loading flights…
+            </div>
+          ) : flights.length === 0 ? (
+            <div className="h-11 bg-slate-50 border border-slate-200 rounded-xl flex items-center px-3 text-[12px] text-slate-400">
+              No flights found
+            </div>
+          ) : (
+            <select
+              className={inputCls + " cursor-pointer"}
+              value={form.flightId}
+              onChange={(e) => set("flightId", e.target.value)}
+            >
+              <option value="">— Select a flight (optional) —</option>
+              {flights.map((f) => (
+                <option key={f._id} value={f._id}>
+                  {f.flightNumber} · {f.source} → {f.destination}
+                  {" · "}
+                  {new Date(f.departureTime).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                  {" · "}
+                  {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Selected flight preview pill */}
+          {form.flightId &&
+            (() => {
+              const sel = flights.find((f) => f._id === form.flightId);
+              if (!sel) return null;
+              return (
+                <div className="mt-2 flex items-center gap-2 bg-[#EAF2FB] border border-blue-100 rounded-xl px-3 py-2">
+                  <i className="ti ti-plane text-[#0C3060] text-[13px]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-bold text-[#0C3060]">
+                      {sel.flightNumber} — {sel.source} → {sel.destination}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {new Date(sel.departureTime).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => set("flightId", "")}
+                    className="text-slate-400 hover:text-red-500 transition cursor-pointer bg-transparent border-none text-[13px]"
+                    title="Clear selection"
+                  >
+                    <i className="ti ti-x text-[13px]" />
+                  </button>
+                </div>
+              );
+            })()}
+        </div>
+      )}
 
       {/* Subject */}
       <div className="mb-4">
