@@ -16,7 +16,10 @@ export const getMyCrewProfile = expressAsyncHandler(async (req, res) => {
   if (!crew) {
     return res
       .status(404)
-      .json({ success: false, message: "Crew profile not found for this user" });
+      .json({
+        success: false,
+        message: "Crew profile not found for this user",
+      });
   }
 
   res.status(200).json({ success: true, data: crew });
@@ -123,7 +126,10 @@ export const getCrewStats = expressAsyncHandler(async (req, res) => {
     success: true,
     data: {
       total,
-      status: { available, onDuty, offDuty, onLeave },
+      available,
+      onDuty,
+      offDuty,
+      onLeave,
       medical: { fit, underTreatment },
       roles: { pilots, coPilots, cabinCrew, groundStaff },
     },
@@ -137,9 +143,22 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
   let createdUser = null;
 
   const {
-    name, email, phone, password, employeeId, role, experience,
-    licenseNumber, licenseExpiry, nationality, dateOfBirth,
-    currentStatus, salary, medicalStatus, medicalLastChecked, medicalNextDue,
+    name,
+    email,
+    phone,
+    password,
+    employeeId,
+    role,
+    experience,
+    licenseNumber,
+    licenseExpiry,
+    nationality,
+    dateOfBirth,
+    currentStatus,
+    salary,
+    medicalStatus,
+    medicalLastChecked,
+    medicalNextDue,
   } = req.body;
 
   if (!name || !email || !phone || !password || !employeeId || !role) {
@@ -155,33 +174,48 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
   ]);
 
   if (emailExists)
-    return res.status(400).json({ success: false, message: "Email already registered" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Email already registered" });
   if (employeeIdExists)
-    return res.status(400).json({ success: false, message: `Employee ID ${employeeId} already exists` });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: `Employee ID ${employeeId} already exists`,
+      });
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    createdUser = await Users.create({ name, email, phone, password: hashedPassword, role: "crew" });
+    createdUser = await Users.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: "crew",
+    });
 
     const crew = await Crews.create({
       userId: createdUser._id,
-      employeeId, role,
-      experience:         experience         || 0,
-      licenseNumber:      licenseNumber      || null,
-      licenseExpiry:      licenseExpiry      || null,
-      nationality:        nationality        || null,
-      dateOfBirth:        dateOfBirth        || null,
-      currentStatus:      currentStatus      || "Available",
-      salary:             salary             || null,
-      medicalStatus:      medicalStatus      || "Fit",
+      employeeId,
+      role,
+      experience: experience || 0,
+      licenseNumber: licenseNumber || null,
+      licenseExpiry: licenseExpiry || null,
+      nationality: nationality || null,
+      dateOfBirth: dateOfBirth || null,
+      currentStatus: currentStatus || "Available",
+      salary: salary || null,
+      medicalStatus: medicalStatus || "Fit",
       medicalLastChecked: medicalLastChecked || null,
-      medicalNextDue:     medicalNextDue     || null,
+      medicalNextDue: medicalNextDue || null,
     });
 
     const populated = await crew.populate("userId", "name email phone role");
     res.status(201).json({ success: true, data: populated });
   } catch (error) {
-    if (createdUser) await Users.findByIdAndDelete(createdUser._id).catch(() => {});
+    if (createdUser)
+      await Users.findByIdAndDelete(createdUser._id).catch(() => {});
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -191,28 +225,56 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const updateCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
-  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
+  if (!crew)
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
 
   const user = await Users.findById(crew.userId);
-  if (!user) return res.status(404).json({ success: false, message: "Associated user not found" });
+  if (!user)
+    return res
+      .status(404)
+      .json({ success: false, message: "Associated user not found" });
 
   const {
-    name, email, phone, password, employeeId, role, experience,
-    licenseNumber, licenseExpiry, nationality, dateOfBirth,
-    currentStatus, salary, medicalStatus, medicalLastChecked, medicalNextDue,
+    name,
+    email,
+    phone,
+    password,
+    employeeId,
+    role,
+    experience,
+    licenseNumber,
+    licenseExpiry,
+    nationality,
+    dateOfBirth,
+    currentStatus,
+    salary,
+    medicalStatus,
+    medicalLastChecked,
+    medicalNextDue,
   } = req.body;
 
   if (email && email !== user.email) {
     const emailExists = await Users.findOne({ email });
-    if (emailExists) return res.status(400).json({ success: false, message: "Email already in use" });
+    if (emailExists)
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use" });
   }
 
   if (employeeId && employeeId !== crew.employeeId) {
     const empExists = await Crews.findOne({ employeeId });
-    if (empExists) return res.status(400).json({ success: false, message: `Employee ID ${employeeId} already exists` });
+    if (empExists)
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: `Employee ID ${employeeId} already exists`,
+        });
   }
 
-  user.name  = name  ?? user.name;
+  user.name = name ?? user.name;
   user.email = email ?? user.email;
   user.phone = phone ?? user.phone;
   if (password && password.trim().length >= 6) {
@@ -220,20 +282,20 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
   }
   await user.save();
 
-  crew.employeeId         = employeeId         ?? crew.employeeId;
-  crew.role               = role               ?? crew.role;
-  crew.experience         = experience         ?? crew.experience;
-  crew.licenseNumber      = licenseNumber      ?? crew.licenseNumber;
-  crew.licenseExpiry      = licenseExpiry      ?? crew.licenseExpiry;
-  crew.nationality        = nationality        ?? crew.nationality;
-  crew.dateOfBirth        = dateOfBirth        ?? crew.dateOfBirth;
-  crew.currentStatus      = currentStatus      ?? crew.currentStatus;
-  crew.salary             = salary             ?? crew.salary;
-  crew.medicalStatus      = medicalStatus      ?? crew.medicalStatus;
+  crew.employeeId = employeeId ?? crew.employeeId;
+  crew.role = role ?? crew.role;
+  crew.experience = experience ?? crew.experience;
+  crew.licenseNumber = licenseNumber ?? crew.licenseNumber;
+  crew.licenseExpiry = licenseExpiry ?? crew.licenseExpiry;
+  crew.nationality = nationality ?? crew.nationality;
+  crew.dateOfBirth = dateOfBirth ?? crew.dateOfBirth;
+  crew.currentStatus = currentStatus ?? crew.currentStatus;
+  crew.salary = salary ?? crew.salary;
+  crew.medicalStatus = medicalStatus ?? crew.medicalStatus;
   crew.medicalLastChecked = medicalLastChecked ?? crew.medicalLastChecked;
-  crew.medicalNextDue     = medicalNextDue     ?? crew.medicalNextDue;
+  crew.medicalNextDue = medicalNextDue ?? crew.medicalNextDue;
 
-  const updated   = await crew.save();
+  const updated = await crew.save();
   const populated = await updated.populate("userId", "name email phone role");
   res.status(200).json({ success: true, data: populated });
 });
@@ -258,7 +320,10 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
     { new: true },
   ).populate("userId", "name email phone role");
 
-  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
+  if (!crew)
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
 
   res.status(200).json({ success: true, data: crew });
 });
@@ -268,7 +333,10 @@ export const updateCrewStatus = expressAsyncHandler(async (req, res) => {
 // ── @access  Admin
 export const deleteCrew = expressAsyncHandler(async (req, res) => {
   const crew = await Crews.findById(req.params.id);
-  if (!crew) return res.status(404).json({ success: false, message: "Crew member not found" });
+  if (!crew)
+    return res
+      .status(404)
+      .json({ success: false, message: "Crew member not found" });
 
   if (crew.currentStatus === "On Duty") {
     return res.status(400).json({
@@ -278,5 +346,7 @@ export const deleteCrew = expressAsyncHandler(async (req, res) => {
   }
 
   await Promise.all([crew.deleteOne(), Users.findByIdAndDelete(crew.userId)]);
-  res.status(200).json({ success: true, message: "Crew member deleted successfully" });
+  res
+    .status(200)
+    .json({ success: true, message: "Crew member deleted successfully" });
 });
