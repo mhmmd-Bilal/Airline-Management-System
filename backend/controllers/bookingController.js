@@ -303,114 +303,114 @@ export const verifyPayment = async (req, res) => {
 };
 
 // ── POST /api/bookings/:id/cancel ─────────────────────
-export const cancelBooking = async (req, res) => {
-  try {
-    const booking = await Bookings.findById(req.params.id).populate("flightId");
+// export const cancelBooking = async (req, res) => {
+//   try {
+//     const booking = await Bookings.findById(req.params.id).populate("flightId");
 
-    if (!booking) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Booking not found" });
-    }
+//     if (!booking) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Booking not found" });
+//     }
 
-    if (String(booking.passengerId) !== String(req.user._id)) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Not authorised" });
-    }
+//     if (String(booking.passengerId) !== String(req.user._id)) {
+//       return res
+//         .status(403)
+//         .json({ success: false, message: "Not authorised" });
+//     }
 
-    if (booking.status === "cancelled") {
-      return res
-        .status(400)
-        .json({ success: false, message: "Booking already cancelled" });
-    }
+//     if (booking.status === "cancelled") {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Booking already cancelled" });
+//     }
 
-    if (booking.status === "completed") {
-      return res
-        .status(400)
-        .json({ success: false, message: "Cannot cancel a completed booking" });
-    }
+//     if (booking.status === "completed") {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Cannot cancel a completed booking" });
+//     }
 
-    const flight = booking.flightId;
+//     const flight = booking.flightId;
 
-    const hoursUntilDeparture =
-      (new Date(flight.departureTime) - Date.now()) / 3600000;
+//     const hoursUntilDeparture =
+//       (new Date(flight.departureTime) - Date.now()) / 3600000;
 
-    if (hoursUntilDeparture < 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot cancel within 2 hours of departure",
-      });
-    }
+//     if (hoursUntilDeparture < 2) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Cannot cancel within 2 hours of departure",
+//       });
+//     }
 
-    // Update booking
-    booking.status = "cancelled";
-    booking.cancelledAt = new Date();
-    booking.paymentStatus = "refunded";
+//     // Update booking
+//     booking.status = "cancelled";
+//     booking.cancelledAt = new Date();
+//     booking.paymentStatus = "refunded";
 
-    await booking.save();
+//     await booking.save();
 
-    await createNotification({
-      recipient: req.user._id,
-      title: "Booking cancelled",
-      message: `Your booking ${booking.bookingReference} has been cancelled. Refund will be processed shortly.`,
-      type: "refund",
-      relatedId: booking._id,
-      relatedModel: "bookings",
-    });
+//     await createNotification({
+//       recipient: req.user._id,
+//       title: "Booking cancelled",
+//       message: `Your booking ${booking.bookingReference} has been cancelled. Refund will be processed shortly.`,
+//       type: "refund",
+//       relatedId: booking._id,
+//       relatedModel: "bookings",
+//     });
 
-    // Restore seats
-    await Flights.findByIdAndUpdate(flight._id, {
-      $inc: { availableSeats: booking.passengerCount },
-    });
+//     // Restore seats
+//     await Flights.findByIdAndUpdate(flight._id, {
+//       $inc: { availableSeats: booking.passengerCount },
+//     });
 
-    // Create refund entry
-    const refund = await Refunds.create({
-      passengerId: booking.passengerId,
-      bookingId: booking._id,
-      amount: booking.totalAmount,
-      reason: booking.cancellationReason,
-      status: "processed",
-      processedAt: new Date(),
-    });
+//     // Create refund entry
+//     const refund = await Refunds.create({
+//       passengerId: booking.passengerId,
+//       bookingId: booking._id,
+//       amount: booking.totalAmount,
+//       reason: booking.cancellationReason,
+//       status: "pending",
+//       processedAt: new Date(),
+//     });
 
-    // Passenger notification
-    await Notifications.create({
-      recipient: booking.passengerId,
-      roleTarget: "passenger",
-      title: "Refund Processed",
-      message: `Refund of ₹${booking.totalAmount} has been processed for booking ${booking.bookingReference}`,
-      type: "refund",
-      relatedId: refund._id,
-      relatedModel: "refunds",
-    });
+//     // Passenger notification
+//     await Notifications.create({
+//       recipient: booking.passengerId,
+//       roleTarget: "passenger",
+//       title: "Refund Processed",
+//       message: `Refund of ₹${booking.totalAmount} has been processed for booking ${booking.bookingReference}`,
+//       type: "refund",
+//       relatedId: refund._id,
+//       relatedModel: "refunds",
+//     });
 
-    // Admin notification
-    await Notifications.create({
-      roleTarget: "admin",
-      title: "Booking Cancelled",
-      message: `${booking.bookingReference} has been cancelled and refunded.`,
-      type: "refund",
-      relatedId: refund._id,
-      relatedModel: "refunds",
-      sentBy: booking.passengerId,
-    });
+//     // Admin notification
+//     await Notifications.create({
+//       roleTarget: "admin",
+//       title: "Booking Cancelled",
+//       message: `${booking.bookingReference} has been cancelled and refunded.`,
+//       type: "refund",
+//       relatedId: refund._id,
+//       relatedModel: "refunds",
+//       sentBy: booking.passengerId,
+//     });
 
-    res.status(200).json({
-      success: true,
-      message: "Booking cancelled and refund processed",
-      data: {
-        booking,
-        refund,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message: "Booking cancelled and refund processed",
+//       data: {
+//         booking,
+//         refund,
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
 
 // ── GET /api/bookings/stats (admin) ───────────────────
 export const getBookingStats = async (req, res) => {

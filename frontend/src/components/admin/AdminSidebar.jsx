@@ -2,14 +2,43 @@ import { NavLink } from "react-router-dom";
 import Avatar from "./shared/Avatar";
 
 const navItems = [
-  { label: "Overview",  icon: "ti-layout-dashboard", path: "/" },
-  { label: "Flights",   icon: "ti-plane",             path: "/flights" },
-  { label: "Fleet",     icon: "ti-propeller",          path: "/fleet" },
-  { label: "Crew",      icon: "ti-users",              path: "/crew" },
-  { label: "Revenue",   icon: "ti-chart-bar",          path: "/revenue" },
-  { label: "Support",   icon: "ti-headset",            path: "/support" },
-  { label: "Settings",  icon: "ti-settings",           path: "/settings" },
+  { label: "Overview", icon: "ti-layout-dashboard", path: "/" },
+  { label: "Flights", icon: "ti-plane", path: "/flights" },
+  { label: "Fleet", icon: "ti-propeller", path: "/fleet" },
+  { label: "Crew", icon: "ti-users", path: "/crew" },
+  { label: "Revenue", icon: "ti-chart-bar", path: "/revenue" },
+  { label: "Support", icon: "ti-headset", path: "/support" },
+  { label: "Settings", icon: "ti-settings", path: "/settings" },
 ];
+
+const managementItems = [
+  { label: "Users", icon: "ti-user-circle", path: "/users" },
+  { label: "Bookings", icon: "ti-ticket", path: "/bookings" },
+  { label: "Refunds", icon: "ti-receipt-refund", path: "/refunds" },
+  { label: "Notifications", icon: "ti-bell", path: "/admin/notifications" },
+];
+
+function NavItem({ item, onClose }) {
+  return (
+    <NavLink
+      to={item.path}
+      end={item.path === "/"}
+      onClick={onClose}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-5 py-[10px] text-[13px] font-medium
+                border-l-[3px] transition-all duration-150 no-underline
+                ${
+                  isActive
+                    ? "text-white bg-white/[0.08] border-[#90CAF9]"
+                    : "text-white/50 border-transparent hover:text-white hover:bg-white/[0.05]"
+                }`
+      }
+    >
+      <i className={`ti ${item.icon} text-[17px]`} />
+      {item.label}
+    </NavLink>
+  );
+}
 
 export default function AdminSidebar({ isOpen, onClose, user }) {
   return (
@@ -34,13 +63,17 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
             <div className="w-8 h-8 rounded-lg bg-white/[0.12] flex items-center justify-center flex-shrink-0">
               <i className="ti ti-plane text-[#90CAF9] text-[17px]" />
             </div>
-            <p className="text-white text-[17px] font-semibold tracking-[-0.3px]">AirlineMS</p>
+            <p className="text-white text-[17px] font-semibold tracking-[-0.3px]">
+              AirlineMS
+            </p>
           </div>
-          <span className="text-white/45 text-[10px] tracking-[0.5px]">Admin Dashboard</span>
+          <span className="text-white/45 text-[10px] tracking-[0.5px]">
+            Admin Dashboard
+          </span>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 pt-3 overflow-y-auto">
+        <nav className="flex-1 pt-3 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {navItems.map((n) => (
             <NavLink
               key={n.path}
@@ -50,15 +83,22 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-5 py-[10px] text-[13px] font-medium
                 border-l-[3px] transition-all duration-150 no-underline
-                ${isActive
-                  ? "text-white bg-white/[0.08] border-[#90CAF9]"
-                  : "text-white/50 border-transparent hover:text-white hover:bg-white/[0.05]"
+                ${
+                  isActive
+                    ? "text-white bg-white/[0.08] border-[#90CAF9]"
+                    : "text-white/50 border-transparent hover:text-white hover:bg-white/[0.05]"
                 }`
               }
             >
               <i className={`ti ${n.icon} text-[17px]`} />
               {n.label}
             </NavLink>
+          ))}
+          <p className="px-5 pt-5 pb-1.5 text-[9px] font-bold text-white/25 uppercase tracking-[1.2px]">
+            Management
+          </p>
+          {managementItems.map((n) => (
+            <NavItem key={n.path} item={n} onClose={onClose} />
           ))}
         </nav>
 
@@ -67,8 +107,12 @@ export default function AdminSidebar({ isOpen, onClose, user }) {
           <div className="flex items-center gap-2.5">
             <Avatar name={user?.name || "Admin User"} size="sm" />
             <div className="min-w-0">
-              <p className="text-white text-[12px] font-medium truncate">{user?.name || "Admin User"}</p>
-              <p className="text-white/40 text-[10px] truncate">{user?.email || "admin@airline.com"}</p>
+              <p className="text-white text-[12px] font-medium truncate">
+                {user?.name || "Admin User"}
+              </p>
+              <p className="text-white/40 text-[10px] truncate">
+                {user?.email || "admin@airline.com"}
+              </p>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@ import {
   getBookingById,
   createOrder,
   verifyPayment,
-  cancelBooking,
+  // cancelBooking,
   getBookingStats,
   getFlightSeats,
   downloadBoardingPass,
@@ -27,6 +27,6 @@ router.get("/:id/download/ticket", protect, downloadTicket);
 router.get("/:id/download/invoice", protect, downloadInvoice);
 router.post("/create-order", protect, createOrder);
 router.post("/verify-payment", protect, verifyPayment);
-router.post("/:id/cancel", protect, cancelBooking);
+// router.post("/:id/cancel", protect, cancelBooking);
 
 export default router;

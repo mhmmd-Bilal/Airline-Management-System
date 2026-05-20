@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   useGetMyBookingsQuery,
-  useCancelBookingMutation,
   triggerPdfDownload,
 } from "../../slices/bookingApiSlice";
 import UserNavbar from "../../components/UserNavbar";

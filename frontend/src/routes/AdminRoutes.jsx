@@ -11,6 +11,9 @@ import SettingsPage from "../screens/AdminScreens/SettingsPage";
 import { ToastContainer } from "react-toastify";
 import FlightDetailPage from "../screens/AdminScreens/FlightDetailPage";
 import NotificationsPage from "../screens/NotificationPage";
+import UsersPage from "../screens/AdminScreens/UsersPage";
+import BookingsPage from "../screens/AdminScreens/BookingsPage";
+import RefundsPage from "../screens/AdminScreens/RefundsPage";
 
 const adminPages = [
   { path: "/", element: <AdminDashboard /> },
@@ -20,6 +23,9 @@ const adminPages = [
   { path: "revenue", element: <RevenuePage /> },
   { path: "support", element: <SupportPage /> },
   { path: "settings", element: <SettingsPage /> },
+  { path: "users", element: <UsersPage /> },
+  { path: "bookings", element: <BookingsPage /> },
+  { path: "refunds", element: <RefundsPage /> },
 ];
 
 export default function AdminRoutes() {
@@ -43,7 +49,10 @@ export default function AdminRoutes() {
             {adminPages.map(({ path, element }) => (
               <Route key={path} path={path} element={element} />
             ))}
-            <Route path="/admin/notifications" element={<NotificationsPage />} />
+            <Route
+              path="/admin/notifications"
+              element={<NotificationsPage />}
+            />
             <Route path="/flights/:id" element={<FlightDetailPage />} />
           </Route>
         </Route>

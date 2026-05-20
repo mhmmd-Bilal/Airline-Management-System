@@ -42,7 +42,6 @@ const fmtDate = (d) =>
 export default function CrewDashboard() {
   const { userData } = useSelector((s) => s.auth);
   const navigate = useNavigate();
-  const [viewFlight, setViewFlight] = useState(null);
   const [punchError, setPunchError] = useState("");
 
   const name = userData?.name ?? "Crew Member";
@@ -245,7 +244,7 @@ export default function CrewDashboard() {
               </p>
             </div>
             <button
-              onClick={() => setViewFlight(activeFlights[0])}
+              onClick={() => navigate(`/crew/flights/${activeFlights[0]._id}`)}
               className="relative z-10 h-9 px-5 bg-white text-[#1565C0] text-[12px] font-bold rounded-xl hover:bg-blue-50 transition border-none cursor-pointer flex-shrink-0"
             >
               View Details
@@ -323,7 +322,7 @@ export default function CrewDashboard() {
                   <FlightCard
                     key={f._id}
                     flight={f}
-                    onClick={() => setViewFlight(f)}
+                    onClick={() => navigate(`/crew/flights/${f._id}`)}
                   />
                 ))
             )}

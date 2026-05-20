@@ -62,14 +62,14 @@ const bookingApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["Booking"],
     }),
 
-    cancelBooking: builder.mutation({
-      query: ({ id, reason }) => ({
-        url: `${BOOKING_URL}/${id}/cancel`,
-        method: "POST",
-        body: { reason },
-      }),
-      invalidatesTags: ["Booking"],
-    }),
+    // cancelBooking: builder.mutation({
+    //   query: ({ id, reason }) => ({
+    //     url: `${BOOKING_URL}/${id}/cancel`,
+    //     method: "POST",
+    //     body: { reason },
+    //   }),
+    //   invalidatesTags: ["Booking"],
+    // }),
 
     getBookingStats: builder.query({
       query: () => ({ url: `${BOOKING_URL}/stats` }),
@@ -91,7 +91,7 @@ export const {
   useGetFlightSeatsQuery,
   useCreateOrderMutation,
   useVerifyPaymentMutation,
-  useCancelBookingMutation,
+  // useCancelBookingMutation,
   useGetBookingStatsQuery,
   useGetBookingsByFlightIdQuery,
 } = bookingApiSlice;
