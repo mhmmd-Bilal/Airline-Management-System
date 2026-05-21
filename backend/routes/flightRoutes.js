@@ -9,6 +9,7 @@ import {
   getFlightsByCrewId,
   searchFlights,
   getBookedFlights,
+  trackMyFlight,
 } from "../controllers/flightController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
@@ -17,6 +18,7 @@ const router = express.Router();
 // routes/flightRoutes.js
 router.get("/search", searchFlights);
 router.get("/crew/:crewId", protect, getFlightsByCrewId);
+router.get("/track-my-flight/:flightId", protect, trackMyFlight);
 router.get("/my-booked-flights", protect, getBookedFlights);
 router.get("/stats", protect, getFlightStats);
 router.get("/", getAllFlights);

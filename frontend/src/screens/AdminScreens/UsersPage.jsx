@@ -7,6 +7,7 @@ import {
   useGetAllUsersQuery,
   useDeleteUserMutation,
 } from "../../slices/userApiSlice";
+import { useNavigate } from "react-router-dom";
 
 // ── Helpers ────────────────────────────────────────────
 const fmt = (dt) =>
@@ -140,7 +141,7 @@ function UserDetailPanel({ user, onDelete }) {
 
 // ── Main page ──────────────────────────────────────────
 export default function UsersPage() {
-  const [role, setRole] = useState("all");
+  // const [role, setRole] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [viewTarget, setViewTarget] = useState(null);
@@ -148,7 +149,6 @@ export default function UsersPage() {
 
   const { data: statsData, isLoading: stLoading } = useGetUserStatsQuery();
   const { data, isLoading, isFetching } = useGetAllUsersQuery({
-    role,
     search,
     page,
     limit: 15,
@@ -159,6 +159,8 @@ export default function UsersPage() {
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const stats = statsData?.data;
+
+  const navigate = useNavigate();
 
   const handleDelete = async () => {
     try {
@@ -178,7 +180,7 @@ export default function UsersPage() {
   return (
     <>
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+      {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
         <StatCard
           label="Total Users"
           value={stats?.total}
@@ -211,7 +213,7 @@ export default function UsersPage() {
           sub="System administrators"
           loading={stLoading}
         />
-      </div>
+      </div> */}
 
       {/* ── Table card ── */}
       <div className="bg-white border border-[#D0E6F7] rounded-2xl p-5">
@@ -237,60 +239,7 @@ export default function UsersPage() {
                 }}
               />
             </div>
-
-            {/* Role filter */}
-            <select
-              className="h-9 px-3 text-[12px] bg-[#F0F7FF] border border-[#D0E6F7] rounded-lg outline-none focus:border-[#1565C0] text-[#0D1B2A] cursor-pointer"
-              value={role}
-              onChange={(e) => {
-                setRole(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">All roles</option>
-              <option value="passenger">Passenger</option>
-              <option value="crew">Crew</option>
-              <option value="admin">Admin</option>
-            </select>
           </div>
-        </div>
-
-        {/* Role tab pills */}
-        <div className="flex gap-1.5 mb-4 flex-wrap">
-          {[
-            {
-              key: "all",
-              label: `All (${total})`,
-              cls: "bg-slate-100 text-slate-600",
-            },
-            {
-              key: "passenger",
-              label: `Passengers (${stats?.passengers ?? 0})`,
-              cls: "bg-green-50 text-green-700",
-            },
-            {
-              key: "crew",
-              label: `Crew (${stats?.crew ?? 0})`,
-              cls: "bg-blue-50 text-blue-700",
-            },
-            {
-              key: "admin",
-              label: `Admins (${stats?.admins ?? 0})`,
-              cls: "bg-violet-50 text-violet-700",
-            },
-          ].map(({ key, label, cls }) => (
-            <button
-              key={key}
-              onClick={() => {
-                setRole(key);
-                setPage(1);
-              }}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border-none cursor-pointer transition
-                ${role === key ? cls + " ring-2 ring-offset-1 ring-current/30" : "bg-[#F0F7FF] text-[#7A90A4] hover:bg-[#EAF4FB]"}`}
-            >
-              {label}
-            </button>
-          ))}
         </div>
 
         {/* Table */}
@@ -302,7 +251,6 @@ export default function UsersPage() {
               <tr>
                 <Th>User</Th>
                 <Th>Email</Th>
-                <Th>Role</Th>
                 <Th>Phone</Th>
                 <Th>Joined</Th>
                 <Th>Actions</Th>
@@ -344,7 +292,6 @@ export default function UsersPage() {
                 </tr>
               ) : (
                 users.map((u) => {
-                  const roleCfg = ROLE_CFG[u.role] || ROLE_CFG.passenger;
                   const isActive = viewTarget?._id === u._id;
                   return (
                     <tr
@@ -368,14 +315,6 @@ export default function UsersPage() {
                         </p>
                       </Td>
                       <Td>
-                        <span
-                          className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize flex items-center gap-1 w-fit ${roleCfg.cls}`}
-                        >
-                          <i className={`ti ${roleCfg.icon} text-[10px]`} />
-                          {roleCfg.label}
-                        </span>
-                      </Td>
-                      <Td>
                         <p className="text-[12px] text-[#7A90A4]">
                           {u.phone || "—"}
                         </p>
@@ -391,7 +330,8 @@ export default function UsersPage() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            onClick={() => setViewTarget(isActive ? null : u)}
+                            // onClick={() => setViewTarget(isActive ? null : u)}
+                            onClick={() => navigate(`/user/${u._id}`)}
                             className={`w-7 h-7 rounded-md border flex items-center justify-center transition cursor-pointer
                               ${
                                 isActive

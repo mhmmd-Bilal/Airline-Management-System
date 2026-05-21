@@ -2,6 +2,9 @@ import Users from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import expressAsyncHandler from "express-async-handler";
 import generateToken from "../utils/generateToken.js";
+import Bookings from "../models/bookingModel.js";
+import Flights from "../models/flightsModel.js";
+import Loyalty from "../models/loyaltyModel.js";
 
 /* -------------------------------------------------------------------------- */
 /*  POST /api/users/register                                                  */
@@ -119,10 +122,11 @@ const getUserStats = expressAsyncHandler(async (req, res) => {
 /*  Query params: role, search, page, limit                                  */
 /* -------------------------------------------------------------------------- */
 const getAllUsers = expressAsyncHandler(async (req, res) => {
-  const { role, search, page = 1, limit = 15 } = req.query;
+  const { search, page = 1, limit = 15 } = req.query;
 
-  const query = {};
-  if (role && role !== "all") query.role = role;
+  const query = {
+    role : "passenger"
+  };
 
   if (search) {
     query.$or = [
@@ -154,10 +158,87 @@ const getAllUsers = expressAsyncHandler(async (req, res) => {
 const getUserById = expressAsyncHandler(async (req, res) => {
   const user = await Users.findById(req.params.id).select("-password");
 
-  if (!user)
-    return res.status(404).json({ success: false, message: "User not found" });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
+  }
 
-  res.status(200).json({ success: true, data: user });
+  // ── BOOKINGS ─────────────────────────────
+  const bookings = await Bookings.find({
+    passengerId: user._id,
+  })
+    .populate({
+      path: "flightId",
+      select:
+        "flightNumber source destination departureTime arrivalTime status",
+    })
+    .sort({ createdAt: -1 });
+
+  // ── FLIGHTS FROM BOOKINGS ────────────────
+  const flights = bookings.map((b) => b.flightId).filter(Boolean);
+
+  // ── LOYALTY ──────────────────────────────
+  let loyalty = await Loyalty.findOne({
+    passengerId: user._id,
+  });
+
+  // fallback if no loyalty document
+  if (!loyalty) {
+    loyalty = {
+      points: 0,
+      tier: "silver",
+      totalEarned: 0,
+      totalRedeemed: 0,
+      history: [],
+    };
+  }
+
+  // ── STATS ────────────────────────────────
+  const totalBookings = bookings.length;
+
+  const completedTrips = bookings.filter(
+    (b) => b.status === "completed",
+  ).length;
+
+  const upcomingTrips = bookings.filter(
+    (b) =>
+      b.status === "confirmed" &&
+      ["scheduled", "boarding", "in-flight", "delayed"].includes(
+        b.flightId?.status,
+      ),
+  ).length;
+
+  const cancelledTrips = bookings.filter(
+    (b) => b.status === "cancelled",
+  ).length;
+
+  const totalSpent = bookings
+    .filter((b) => b.paymentStatus === "paid")
+    .reduce((acc, curr) => acc + curr.totalAmount, 0);
+
+  res.status(200).json({
+    success: true,
+
+    data: {
+      user,
+
+      stats: {
+        totalBookings,
+        completedTrips,
+        upcomingTrips,
+        cancelledTrips,
+        totalSpent,
+      },
+
+      loyalty,
+
+      bookings,
+
+      flights,
+    },
+  });
 });
 
 /* -------------------------------------------------------------------------- */

@@ -76,6 +76,12 @@ const flightApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ["Flight"],
     }),
+    trackMyFlight: builder.query({
+      query: (flightId) => ({
+        url: `${FLIGHTS_URL}/track-my-flight/${flightId}`,
+      }),
+      providesTags: ["Flight"],
+    }),
   }),
 });
 
@@ -89,5 +95,6 @@ export const {
   useUpdateFlightMutation,
   useDeleteFlightMutation,
   useSearchFlightsQuery,
-  useGetBookedFlightsQuery
+  useGetBookedFlightsQuery,
+  useTrackMyFlightQuery,
 } = flightApiSlice;

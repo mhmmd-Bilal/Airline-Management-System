@@ -4,11 +4,12 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../slices/authSlice";
 import NotificationBell from "./NotificationBell";
+import { useGetBookedFlightsQuery } from "../slices/flightApiSlice";
 
 const NAV_LINKS = [
   { label: "Home", to: "/", authRequired: false },
-  { label: "My Bookings", to: "/bookings", authRequired: true },
   { label: "Deals", to: "/deals", authRequired: false },
+  { label: "My Bookings", to: "/bookings", authRequired: true },
   { label: "Loyalty", to: "/loyalty", authRequired: true },
 ];
 
@@ -167,14 +168,45 @@ export default function UserNavbar() {
 
   const handleLogout = () => {
     dispatch(logout());
-    navigate("/login");
+    navigate("/");
   };
 
   const isActive = (to) =>
     to === "/" ? location.pathname === "/" : location.pathname.startsWith(to);
 
+  const { data: bookedFlights } = useGetBookedFlightsQuery(undefined, {
+    skip: !userData,
+  });
+
+  const activeBooking = bookedFlights?.bookings?.find((booking) => {
+    const flight = bookedFlights?.data?.find((f) => f._id === booking.flightId);
+
+    if (!flight) return false;
+
+    const activeFlightStatus =
+      flight.status === "boarding" ||
+      flight.status === "in-flight" ||
+      flight.status === "delayed";
+
+    const validBookingStatus = booking.status === "confirmed";
+
+    return activeFlightStatus && validBookingStatus;
+  });
+
+  const activeFlight = bookedFlights?.data?.find(
+    (f) => f._id === activeBooking?.flightId,
+  );
+
   // ── Only show auth-required links when logged in ──
-  const visibleLinks = NAV_LINKS.filter((l) => !l.authRequired || !!userData);
+  // const visibleLinks = NAV_LINKS.filter((l) => !l.authRequired || !!userData);
+  let visibleLinks = NAV_LINKS.filter((l) => !l.authRequired || !!userData);
+
+  if (activeFlight && activeBooking) {
+    visibleLinks.push({
+      label: "Track Plane",
+      to: `/track-flight/${activeFlight._id}`,
+    });
+  }
 
   return (
     <>

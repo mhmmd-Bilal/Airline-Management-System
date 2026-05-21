@@ -18,6 +18,7 @@ import SupportPage from "./screens/UserScreens/SupportPage";
 import BookingDetails from "./screens/UserScreens/BookingDetails";
 import NotificationsPage from "./screens/NotificationPage";
 import { getSocket, disconnectSocket } from "./services/socketService";
+import TrackFlightPage from "./screens/UserScreens/TrackFlightPage";
 
 function SocketManager() {
   const { userData } = useSelector((s) => s.auth);
@@ -71,6 +72,7 @@ function App() {
           path="/notifications"
           element={<NotificationsPage notifPath="/notifications" />}
         />
+        <Route path="/track-flight/:flightId" element={<TrackFlightPage />} />
       </Routes>
     </>
   );

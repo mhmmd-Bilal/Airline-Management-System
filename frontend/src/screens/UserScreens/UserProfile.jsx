@@ -1,4 +1,5 @@
 // src/pages/user/UserProfile.jsx
+
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -6,21 +7,77 @@ import { useGetMyBookingsQuery } from "../../slices/bookingApiSlice";
 import UserNavbar from "../../components/UserNavbar";
 
 const inputCls =
-  "w-full h-11 px-3 text-[13px] text-[#0C3060] bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-[#0C3060] focus:ring-2 focus:ring-blue-50 transition placeholder:text-slate-300";
+  "w-full h-11 px-4 text-[13px] text-[#0C3060] bg-[#F7FAFD] border border-[#DCE8F5] rounded-2xl outline-none focus:border-[#1565C0] focus:ring-4 focus:ring-blue-50 transition placeholder:text-slate-300";
+
+function StatCard({ icon, label, value, color }) {
+  return (
+    <div className="bg-white rounded-[28px] border border-[#E6EEF7] p-5 shadow-sm hover:shadow-md transition">
+      <div
+        className="w-12 h-12 rounded-2xl flex items-center justify-center"
+        style={{
+          background: `${color}15`,
+        }}
+      >
+        <i className={`ti ${icon} text-[22px]`} style={{ color }} />
+      </div>
+
+      <h3
+        className="mt-5 text-[28px] font-black leading-none"
+        style={{ color }}
+      >
+        {value}
+      </h3>
+
+      <p className="mt-2 text-[11px] uppercase tracking-[2px] text-[#8EA3B7] font-bold">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function QuickAction({ icon, title, subtitle, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group bg-white border border-[#E6EEF7] hover:border-[#1565C0] rounded-[28px] p-5 flex items-center gap-4 transition-all duration-300 cursor-pointer text-left hover:-translate-y-1 hover:shadow-md"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-[#EEF5FD] group-hover:bg-[#1565C0] transition flex items-center justify-center flex-shrink-0">
+        <i
+          className={`ti ${icon} text-[#1565C0] group-hover:text-white text-[24px] transition`}
+        />
+      </div>
+
+      <div>
+        <h3 className="text-[15px] font-black text-[#0D1B2A]">{title}</h3>
+
+        <p className="text-[12px] text-[#8EA3B7] mt-1">{subtitle}</p>
+      </div>
+    </button>
+  );
+}
 
 export default function UserProfile() {
   const { userData } = useSelector((s) => s.auth);
+
   const navigate = useNavigate();
+
   const [editMode, setEditMode] = useState(false);
+
   const [form, setForm] = useState({
     name: userData?.name || "",
     phone: userData?.phone || "",
   });
 
   const { data: bookingData } = useGetMyBookingsQuery();
+
   const bookings = bookingData?.data ?? [];
+
   const confirmed = bookings.filter((b) => b.status === "confirmed").length;
+
   const completed = bookings.filter((b) => b.status === "completed").length;
+
+  const cancelled = bookings.filter((b) => b.status === "cancelled").length;
+
   const totalSpent = bookings
     .filter((b) => b.paymentStatus === "paid")
     .reduce((a, b) => a + b.totalAmount, 0);
@@ -31,160 +88,266 @@ export default function UserProfile() {
       field: "name",
       value: userData?.name,
       editable: true,
+      icon: "ti-user",
     },
-    { label: "Email", field: "email", value: userData?.email, editable: false },
-    { label: "Phone", field: "phone", value: userData?.phone, editable: true },
+    {
+      label: "Email address",
+      field: "email",
+      value: userData?.email,
+      editable: false,
+      icon: "ti-mail",
+    },
+    {
+      label: "Phone number",
+      field: "phone",
+      value: userData?.phone,
+      editable: true,
+      icon: "ti-phone",
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
-      {/* Navbar */}
-     <UserNavbar/>
+    <div className="min-h-screen bg-[#F4F8FC]">
+      <UserNavbar />
 
-      <div className="w-11/12 mx-auto px-4 py-8">
-        {/* Profile header */}
-        <div className="bg-[#0C3060] rounded-2xl p-6 mb-5 relative overflow-hidden">
-          <div className="absolute w-48 h-48 rounded-full bg-white/[0.05] -top-12 -right-12" />
-          <div className="relative z-10 flex items-center gap-4 flex-wrap">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl font-black flex-shrink-0">
-              {userData?.name?.charAt(0).toUpperCase()}
+      <div className="w-11/12 mx-auto py-7">
+        {/* HERO */}
+        <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-[#0D2540] via-[#123B64] to-[#1565C0] p-7 md:p-9 shadow-[0_20px_60px_rgba(13,37,64,0.16)]">
+          {/* GLOW */}
+          <div className="absolute -top-24 -right-24 w-[260px] h-[260px] rounded-full bg-white/10 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            {/* LEFT */}
+            <div className="flex items-center gap-5 flex-wrap">
+              <div className="w-24 h-24 rounded-[28px] bg-white/15 border border-white/10 backdrop-blur-xl flex items-center justify-center text-white text-[38px] font-black shadow-lg">
+                {userData?.name?.charAt(0)?.toUpperCase()}
+              </div>
+
+              <div>
+                <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full mb-4">
+                  <div className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse" />
+
+                  <span className="text-white text-[11px] font-bold tracking-wide">
+                    ACTIVE PASSENGER
+                  </span>
+                </div>
+
+                <h1 className="text-white text-[32px] md:text-[42px] font-black leading-none tracking-[-1px]">
+                  {userData?.name}
+                </h1>
+
+                <p className="mt-3 text-blue-100 text-[14px] font-medium">
+                  {userData?.email}
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <div className="bg-white/10 border border-white/10 px-4 py-2 rounded-2xl">
+                    <p className="text-white/60 text-[10px] uppercase tracking-[2px] font-bold">
+                      Role
+                    </p>
+
+                    <p className="text-white text-[13px] font-bold mt-1 capitalize">
+                      {userData?.role}
+                    </p>
+                  </div>
+
+                  <div className="bg-white/10 border border-white/10 px-4 py-2 rounded-2xl">
+                    <p className="text-white/60 text-[10px] uppercase tracking-[2px] font-bold">
+                      Flights
+                    </p>
+
+                    <p className="text-white text-[13px] font-bold mt-1">
+                      {bookings.length} Total Bookings
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-white/70 text-[11px] font-semibold uppercase tracking-widest mb-1">
-                Passenger Account
+
+            {/* RIGHT */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-[30px] p-6 min-w-[240px]">
+              <p className="text-white/70 text-[11px] uppercase tracking-[2px] font-bold">
+                Total Travel Spend
               </p>
-              <h1 className="text-white text-xl font-bold">{userData?.name}</h1>
-              <p className="text-blue-200 text-sm">{userData?.email}</p>
+
+              <h2 className="mt-3 text-white text-[40px] font-black leading-none">
+                ₹{totalSpent.toLocaleString()}
+              </h2>
+
+              <p className="mt-3 text-white/70 text-[12px]">
+                Across all successful bookings
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3.5 mb-5">
-          {[
-            { label: "Upcoming", value: confirmed, color: "text-[#0C3060]" },
-            { label: "Completed", value: completed, color: "text-green-600" },
-            {
-              label: "Spent",
-              value: `₹${totalSpent.toLocaleString()}`,
-              color: "text-[#0C3060]",
-            },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="bg-white rounded-2xl border border-slate-100 p-4 text-center"
-            >
-              <p className={`text-2xl font-bold leading-none mb-1 ${s.color}`}>
-                {s.value}
-              </p>
-              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">
-                {s.label}
-              </p>
-            </div>
-          ))}
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-7">
+          <StatCard
+            icon="ti-plane-departure"
+            label="Upcoming Flights"
+            value={confirmed}
+            color="#1565C0"
+          />
+
+          <StatCard
+            icon="ti-circle-check"
+            label="Completed Trips"
+            value={completed}
+            color="#2E7D32"
+          />
+
+          <StatCard
+            icon="ti-x"
+            label="Cancelled"
+            value={cancelled}
+            color="#D32F2F"
+          />
         </div>
 
-        {/* Account details */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Account details
-            </p>
-            <button
-              onClick={() => setEditMode(!editMode)}
-              className="text-[12px] text-[#0C3060] font-semibold hover:underline bg-transparent border-none cursor-pointer"
-            >
-              {editMode ? "Cancel" : "Edit"}
-            </button>
+        {/* PROFILE + ACTIVITY */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-6 mt-7">
+          {/* ACCOUNT DETAILS */}
+          <div className="bg-white rounded-[32px] border border-[#E6EEF7] p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-7">
+              <div>
+                <h2 className="text-[24px] font-black text-[#0D1B2A]">
+                  Personal Information
+                </h2>
+
+                <p className="text-[12px] text-[#8EA3B7] mt-1">
+                  Manage your passenger account details
+                </p>
+              </div>
+
+              <button
+                onClick={() => setEditMode(!editMode)}
+                className={`h-11 px-5 rounded-2xl text-[13px] font-bold transition border-none cursor-pointer ${
+                  editMode
+                    ? "bg-red-50 text-red-600"
+                    : "bg-[#EEF5FD] text-[#1565C0]"
+                }`}
+              >
+                {editMode ? "Cancel" : "Edit Profile"}
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              {accountFields.map(({ label, field, value, editable, icon }) => (
+                <div
+                  key={field}
+                  className="border border-[#EDF3F8] rounded-[24px] p-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#EEF5FD] flex items-center justify-center flex-shrink-0">
+                      <i className={`ti ${icon} text-[#1565C0] text-[20px]`} />
+                    </div>
+
+                    <div className="flex-1">
+                      <p className="text-[11px] uppercase tracking-[2px] text-[#8EA3B7] font-bold">
+                        {label}
+                      </p>
+
+                      <div className="mt-2">
+                        {editMode && editable ? (
+                          <input
+                            className={inputCls}
+                            value={form[field] ?? value}
+                            onChange={(e) =>
+                              setForm((p) => ({
+                                ...p,
+                                [field]: e.target.value,
+                              }))
+                            }
+                          />
+                        ) : (
+                          <h3 className="text-[16px] font-bold text-[#0D1B2A] break-all">
+                            {value || "—"}
+                          </h3>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {editMode && (
+              <button
+                className="w-full mt-6 h-12 rounded-2xl bg-gradient-to-r from-[#0D2540] to-[#1565C0] text-white font-bold text-[14px] border-none cursor-pointer shadow-lg shadow-blue-100"
+                onClick={() => {
+                  // TODO: update profile API
+                  setEditMode(false);
+                }}
+              >
+                Save Changes
+              </button>
+            )}
           </div>
 
-          {accountFields.map(({ label, field, value, editable }, i) => (
-            <div
-              key={field}
-              className={`flex items-center justify-between py-3 ${i > 0 ? "border-t border-slate-50" : ""}`}
-            >
-              <span className="text-[12px] font-medium text-slate-400 w-32 flex-shrink-0">
-                {label}
-              </span>
-              {editMode && editable ? (
-                <input
-                  className={`${inputCls} max-w-[240px]`}
-                  value={form[field] ?? value}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, [field]: e.target.value }))
-                  }
-                />
-              ) : (
-                <span className="text-[13px] font-semibold text-[#0C3060]">
-                  {value || "—"}
-                </span>
-              )}
-            </div>
-          ))}
+          {/* SIDE PANEL */}
+          <div className="space-y-6">
+            {/* ACCOUNT STATUS */}
+            <div className="bg-white rounded-[32px] border border-[#E6EEF7] p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[2px] text-[#8EA3B7] font-bold">
+                    Account Status
+                  </p>
 
-          {editMode && (
-            <button
-              className="w-full mt-4 h-11 bg-[#0C3060] hover:bg-[#0a2550] text-white rounded-xl font-bold text-sm border-none cursor-pointer transition"
-              onClick={() => {
-                // TODO: dispatch updateProfile API call
-                setEditMode(false);
-              }}
-            >
-              Save changes
-            </button>
-          )}
-        </div>
+                  <h3 className="text-[22px] font-black text-[#0D1B2A] mt-2">
+                    Verified User
+                  </h3>
+                </div>
 
-        {/* Quick links */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => navigate("/bookings")}
-            className="bg-white border border-slate-100 hover:border-[#0C3060] rounded-2xl p-4 flex items-center gap-3 cursor-pointer transition group text-left"
-          >
-            <div className="w-10 h-10 bg-[#EAF2FB] group-hover:bg-[#0C3060] rounded-xl flex items-center justify-center transition flex-shrink-0">
-              <svg
-                className="w-5 h-5 text-[#0C3060] group-hover:text-white transition"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[13px] font-bold text-[#0C3060]">
-                My Bookings
-              </p>
-              <p className="text-[11px] text-slate-400">
-                {bookings.length} total
-              </p>
-            </div>
-          </button>
+                <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center">
+                  <i className="ti ti-shield-check text-green-600 text-[28px]" />
+                </div>
+              </div>
 
-          <button
-            onClick={() => navigate("/")}
-            className="bg-white border border-slate-100 hover:border-[#0C3060] rounded-2xl p-4 flex items-center gap-3 cursor-pointer transition group text-left"
-          >
-            <div className="w-10 h-10 bg-[#EAF2FB] group-hover:bg-[#0C3060] rounded-xl flex items-center justify-center transition flex-shrink-0">
-              <svg
-                className="w-5 h-5 text-[#0C3060] group-hover:text-white transition"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
+              <div className="mt-6 bg-[#F4F8FC] rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-[#5F7488]">
+                    Booking Activity
+                  </span>
+
+                  <span className="text-[12px] font-black text-[#0D1B2A]">
+                    {bookings.length} Flights
+                  </span>
+                </div>
+
+                <div className="mt-3 h-2 bg-[#DDE9F5] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#1565C0]"
+                    style={{
+                      width: `${
+                        bookings.length > 0
+                          ? (completed / bookings.length) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-[13px] font-bold text-[#0C3060]">
-                Search Flights
-              </p>
-              <p className="text-[11px] text-slate-400">Find new trips</p>
+
+            {/* QUICK ACTIONS */}
+            <div className="space-y-4">
+              <QuickAction
+                icon="ti-ticket"
+                title="My Bookings"
+                subtitle={`${bookings.length} bookings available`}
+                onClick={() => navigate("/bookings")}
+              />
+
+              <QuickAction
+                icon="ti-search"
+                title="Search Flights"
+                subtitle="Book your next destination"
+                onClick={() => navigate("/")}
+              />
             </div>
-          </button>
+          </div>
         </div>
       </div>
     </div>

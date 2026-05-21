@@ -478,5 +478,99 @@ export const getBookedFlights = expressAsyncHandler(async (req, res) => {
     success: true,
     count: flights.length,
     data: flights,
+    bookings 
+  });
+});
+
+
+
+// ── @desc    Track flight for logged-in passenger
+// ── @route   GET /api/flights/track/:flightId
+// ── @access  Private
+export const trackMyFlight = expressAsyncHandler(async (req, res) => {
+  const { flightId } = req.params;
+
+  // find booking of this user for this flight
+  const booking = await Bookings.findOne({
+    passengerId: req.user._id,
+    flightId,
+    status: { $ne: "cancelled" },
+  });
+
+  if (!booking) {
+    return res.status(404).json({
+      success: false,
+      message: "No valid booking found for this flight",
+    });
+  }
+
+  const flight = await Flights.findById(flightId)
+    .populate("aircraftId", "registrationNumber model")
+    .populate({
+      path: "crewIds",
+      select: "role employeeId",
+      populate: {
+        path: "userId",
+        select: "name",
+      },
+    });
+
+  if (!flight) {
+    return res.status(404).json({
+      success: false,
+      message: "Flight not found",
+    });
+  }
+
+  // full route
+  const stops =
+    flight.routes?.length > 0
+      ? flight.routes
+      : [flight.source, flight.destination];
+
+  // progress percentage
+  const now = new Date();
+
+  const totalDuration =
+    new Date(flight.arrivalTime) - new Date(flight.departureTime);
+
+  const completedDuration =
+    now - new Date(flight.departureTime);
+
+  let progress = Math.round(
+    (completedDuration / totalDuration) * 100
+  );
+
+  progress = Math.max(0, Math.min(progress, 100));
+
+  res.status(200).json({
+    success: true,
+
+    data: {
+      booking: {
+        id: booking._id,
+        bookingReference: booking.bookingReference,
+        seats: booking.seats,
+        passengerCount: booking.passengerCount,
+        seatClass: booking.seatClass,
+      },
+
+      flight: {
+        _id: flight._id,
+        flightNumber: flight.flightNumber,
+        source: flight.source,
+        destination: flight.destination,
+        routes: stops,
+        currentStop: flight.currentStop,
+        status: flight.status,
+        departureTime: flight.departureTime,
+        arrivalTime: flight.arrivalTime,
+        actualArrivalTime: flight.actualArrivalTime,
+        progress,
+        aircraft: flight.aircraftId,
+        totalSeats : flight.totalSeats,
+        availableSeats : flight.availableSeats
+      },
+    },
   });
 });

@@ -145,128 +145,288 @@ function RouteVisualiser({ flight }) {
     flight.routes?.length > 0
       ? flight.routes
       : [flight.source, flight.destination].filter(Boolean);
+
   const status = flight.status;
+
   const statusColor = statusColorMap[status] || "#1565C0";
 
+  // ---------- TIME HELPERS ----------
+  const formatTime = (date) =>
+    new Date(date).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString([], {
+      day: "2-digit",
+      month: "short",
+    });
+
+  const getDuration = (start, end) => {
+    const diff = new Date(end) - new Date(start);
+
+    const hrs = Math.floor(diff / (1000 * 60 * 60));
+
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    return `${hrs}h ${mins}m`;
+  };
+
+  // ---------- LIVE TIME PROGRESS ----------
+  const getTimeBasedProgress = () => {
+    const now = new Date().getTime();
+
+    const departure = new Date(flight.departureTime).getTime();
+
+    const arrival = new Date(flight.arrivalTime).getTime();
+
+    const total = arrival - departure;
+
+    const elapsed = now - departure;
+
+    // before departure
+    if (now < departure) return 0;
+
+    // after arrival
+    if (now > arrival) return 100;
+
+    // live percentage
+    return Math.min(Math.max((elapsed / total) * 100, 0), 100);
+  };
+
+  const liveProgress = getTimeBasedProgress();
+
+  // ---------- CURRENT ACTIVE STOP ----------
   const activeIdx = (() => {
-    if (status === "completed") return stops.length - 1;
-    if (status === "boarding") return 0;
-    if (!flight.currentStop) return status === "in-flight" ? 0 : -1;
+    if (status === "completed") {
+      return stops.length - 1;
+    }
+
+    // non-stop flight
+    if (stops.length === 2 && status === "in-flight") {
+      return 0;
+    }
+
+    if (status === "boarding") {
+      return 0;
+    }
+
+    if (!flight.currentStop) {
+      return -1;
+    }
+
     const idx = stops.findIndex(
       (s) => s?.toLowerCase() === flight.currentStop?.toLowerCase(),
     );
+
     return idx >= 0 ? idx : 0;
   })();
 
+  // ---------- PROGRESS ----------
   const progressPct = (() => {
     if (status === "completed") return 100;
-    if (["scheduled", "cancelled", "delayed"].includes(status)) return 0;
+
+    if (["scheduled", "cancelled", "delayed"].includes(status)) {
+      return 0;
+    }
+
+    // non-stop flight → smooth movement by time
+    if (stops.length === 2) {
+      return liveProgress;
+    }
+
+    // multi-stop flight
     if (status === "boarding") return 5;
-    if (stops.length <= 1) return 50;
-    return Math.min(Math.round((activeIdx / (stops.length - 1)) * 100), 95);
+
+    return Math.min(
+      Math.round((activeIdx / (stops.length - 1)) * 100),
+      95,
+    );
   })();
 
+  const departure = new Date(flight.departureTime);
+
+  const arrival = new Date(flight.arrivalTime);
+
   return (
-    <div className="bg-[#EAF4FB] rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-center">
-          <p className="text-[32px] font-black text-[#0D1B2A] leading-none">
+    <div className="bg-gradient-to-br from-[#EEF7FF] to-[#F9FCFF] border border-[#DCEEFF] rounded-[28px] p-6 shadow-sm">
+      {/* TOP SECTION */}
+      <div className="flex items-start justify-between gap-6 mb-8">
+        {/* SOURCE */}
+        <div className="text-center min-w-[90px]">
+          <h2 className="text-[38px] font-black text-[#0D1B2A] leading-none">
             {stops[0] || flight.source}
+          </h2>
+
+          <p className="text-[13px] font-medium text-[#7A90A4] mt-1">
+            Departure
           </p>
-          <p className="text-[12px] text-[#7A90A4] mt-1 font-medium">
-            {flight.source}
+
+          <p className="text-[18px] font-bold text-[#0D1B2A] mt-3">
+            {formatTime(departure)}
           </p>
-          <p className="text-[11px] text-[#B0C4D8] mt-0.5">
-            {fmt(flight.departureTime)}
+
+          <p className="text-[11px] text-[#9DB2C6]">
+            {formatDate(departure)}
           </p>
         </div>
-        <div className="flex-1 flex flex-col items-center px-6 gap-2">
-          <span className="text-[11px] font-bold text-[#7A90A4] uppercase tracking-widest">
+
+        {/* CENTER */}
+        <div className="flex-1 flex flex-col items-center">
+          <span className="text-[11px] tracking-[3px] uppercase font-bold text-[#7A90A4]">
             {flight.flightNumber}
           </span>
-          <Badge label={statusBadgeMap[status] || status} />
-          <span className="text-[11px] text-[#7A90A4]">
-            {duration(flight.departureTime, flight.arrivalTime)}
-          </span>
-          {status === "in-flight" && flight.currentStop && (
-            <span className="text-[10px] font-semibold text-[#1565C0] bg-blue-50 px-2 py-0.5 rounded-full">
-              Over {flight.currentStop}
-            </span>
+
+          <div className="my-2">
+            <Badge label={statusBadgeMap[status] || status} />
+          </div>
+
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-[#5B7288]">
+            <i className="ti ti-clock text-[14px]" />
+            {getDuration(departure, arrival)}
+          </div>
+
+          {/* TIME RANGE */}
+          <div className="mt-2 bg-white border border-[#DCEEFF] rounded-full px-3 py-1 text-[11px] font-semibold text-[#4F657A] shadow-sm">
+            {formatTime(departure)} → {formatTime(arrival)}
+          </div>
+
+          {/* LIVE STATUS */}
+          {status === "in-flight" && (
+            <div className="mt-3 bg-blue-50 text-[#1565C0] px-3 py-1 rounded-full text-[11px] font-bold">
+              {stops.length === 2
+                ? "Flight in progress"
+                : `Flying over ${flight.currentStop || "route"}`}
+            </div>
           )}
         </div>
-        <div className="text-center">
-          <p className="text-[32px] font-black text-[#0D1B2A] leading-none">
+
+        {/* DESTINATION */}
+        <div className="text-center min-w-[90px]">
+          <h2 className="text-[38px] font-black text-[#0D1B2A] leading-none">
             {stops[stops.length - 1] || flight.destination}
+          </h2>
+
+          <p className="text-[13px] font-medium text-[#7A90A4] mt-1">
+            Arrival
           </p>
-          <p className="text-[12px] text-[#7A90A4] mt-1 font-medium">
-            {flight.destination}
+
+          <p className="text-[18px] font-bold text-[#0D1B2A] mt-3">
+            {formatTime(arrival)}
           </p>
-          <p className="text-[11px] text-[#B0C4D8] mt-0.5">
-            {fmt(flight.arrivalTime)}
+
+          <p className="text-[11px] text-[#9DB2C6]">
+            {formatDate(arrival)}
           </p>
         </div>
       </div>
 
-      <div className="relative mb-6 mx-2">
-        <div className="h-2 bg-white rounded-full overflow-hidden">
+      {/* PROGRESS BAR */}
+      <div className="relative mb-10">
+        <div className="h-3 bg-white rounded-full overflow-hidden border border-[#DCEEFF]">
           {!["scheduled", "cancelled", "delayed"].includes(status) && (
             <div
               className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${progressPct}%`, backgroundColor: statusColor }}
+              style={{
+                width: `${progressPct}%`,
+                background: `linear-gradient(to right, ${statusColor}, ${statusColor}CC)`,
+              }}
             />
           )}
         </div>
+
+        {/* AIRPLANE */}
         {["boarding", "in-flight"].includes(status) && (
           <div
-            className="absolute -top-4 transition-all duration-700"
-            style={{ left: `calc(${progressPct}% - 10px)` }}
+            className="absolute -top-5 transition-all duration-700"
+            style={{
+              left: `calc(${progressPct}% - 12px)`,
+            }}
           >
-            <i className="ti ti-plane text-[#1565C0] text-[22px]" />
+            <div className="bg-white shadow-md rounded-full p-1">
+              <i
+                className="ti ti-plane text-[22px]"
+                style={{ color: statusColor }}
+              />
+            </div>
           </div>
         )}
+
+        {/* COMPLETED */}
         {status === "completed" && (
-          <div className="absolute -top-3 right-0">
-            <i className="ti ti-circle-check text-[#2E7D32] text-[20px]" />
+          <div className="absolute -top-4 right-0">
+            <div className="bg-white rounded-full p-1 shadow">
+              <i className="ti ti-circle-check text-[#2E7D32] text-[22px]" />
+            </div>
           </div>
         )}
       </div>
 
+      {/* ROUTE STOPS */}
       {stops.length > 0 && (
         <div className="relative">
-          <div className="flex items-start justify-between gap-2">
+          {/* CONNECTING LINE */}
+          <div className="absolute top-[9px] left-0 right-0 flex px-[18px] z-0">
+            {stops.slice(0, -1).map((_, i) => (
+              <div
+                key={i}
+                className="flex-1 h-[3px] rounded-full mx-1"
+                style={{
+                  background:
+                    status === "completed" || i < activeIdx
+                      ? statusColor
+                      : "#D9EAF7",
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="flex justify-between items-start relative z-10 gap-2">
             {stops.map((stop, i) => {
               const isPast = activeIdx >= 0 && i < activeIdx;
+
               const isCurrent = activeIdx >= 0 && i === activeIdx;
+
               const isFirst = i === 0;
+
               const isLast = i === stops.length - 1;
+
               const filled =
                 isPast ||
                 isCurrent ||
                 status === "completed" ||
                 (status === "boarding" && isFirst);
+
               return (
                 <div
                   key={i}
-                  className="flex flex-col items-center gap-1.5 flex-1"
+                  className="flex flex-col items-center flex-1"
                 >
+                  {/* DOT */}
                   <div className="relative flex items-center justify-center">
-                    {isCurrent && (
+                    {isCurrent && status !== "completed" && (
                       <div
-                        className="absolute w-6 h-6 rounded-full animate-ping"
-                        style={{ backgroundColor: statusColor, opacity: 0.2 }}
+                        className="absolute w-8 h-8 rounded-full animate-ping"
+                        style={{
+                          backgroundColor: `${statusColor}30`,
+                        }}
                       />
                     )}
+
                     <div
-                      className="w-3.5 h-3.5 rounded-full border-2 relative z-10 transition-all duration-500"
+                      className="w-5 h-5 rounded-full border-[3px] relative z-10 transition-all duration-500"
                       style={{
                         borderColor: statusColor,
-                        backgroundColor: filled ? statusColor : "white",
-                        transform: isCurrent ? "scale(1.4)" : "scale(1)",
+                        backgroundColor: filled ? statusColor : "#fff",
+                        transform: isCurrent ? "scale(1.2)" : "scale(1)",
                       }}
                     />
                   </div>
+
+                  {/* STOP NAME */}
                   <p
-                    className="text-[13px] font-black text-center"
+                    className="mt-3 text-[14px] font-black text-center"
                     style={{
                       color: isCurrent
                         ? statusColor
@@ -277,37 +437,31 @@ function RouteVisualiser({ flight }) {
                   >
                     {stop}
                   </p>
-                  <p className="text-[9px] text-[#B0C4D8] text-center">
-                    {isFirst ? "Origin" : isLast ? "Destination" : `Stop ${i}`}
+
+                  {/* LABEL */}
+                  <p className="text-[10px] text-[#A5B8C9] mt-1">
+                    {isFirst
+                      ? "Origin"
+                      : isLast
+                        ? "Destination"
+                        : `Stop ${i}`}
                   </p>
-                  {isCurrent && (
-                    <span
-                      className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+
+                  {/* CURRENT */}
+                  {isCurrent && status !== "completed" && (
+                    <div
+                      className="mt-2 px-2 py-1 rounded-full text-[10px] font-bold"
                       style={{
                         backgroundColor: `${statusColor}20`,
                         color: statusColor,
                       }}
                     >
-                      Here
-                    </span>
+                      Current
+                    </div>
                   )}
                 </div>
               );
             })}
-          </div>
-          <div className="absolute top-[6px] left-0 right-0 flex pointer-events-none px-[7px]">
-            {stops.slice(0, -1).map((_, i) => (
-              <div
-                key={i}
-                className="h-0.5 flex-1 mx-1 rounded-full"
-                style={{
-                  backgroundColor:
-                    status === "completed" || (activeIdx >= 0 && i < activeIdx)
-                      ? statusColor
-                      : "#D0E6F7",
-                }}
-              />
-            ))}
           </div>
         </div>
       )}
