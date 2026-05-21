@@ -14,6 +14,7 @@ import NotificationsPage from "../screens/NotificationPage";
 import UsersPage from "../screens/AdminScreens/UsersPage";
 import BookingsPage from "../screens/AdminScreens/BookingsPage";
 import RefundsPage from "../screens/AdminScreens/RefundsPage";
+import MedicalRequestsPage from "../screens/AdminScreens/MedicalRequestsPage";
 
 const adminPages = [
   { path: "/", element: <AdminDashboard /> },
@@ -26,6 +27,7 @@ const adminPages = [
   { path: "users", element: <UsersPage /> },
   { path: "bookings", element: <BookingsPage /> },
   { path: "refunds", element: <RefundsPage /> },
+  { path: "medical-requests", element: <MedicalRequestsPage /> },
 ];
 
 export default function AdminRoutes() {

@@ -8,6 +8,7 @@ const navItems = [
   { label: "Crew", icon: "ti-users", path: "/crew" },
   { label: "Revenue", icon: "ti-chart-bar", path: "/revenue" },
   { label: "Support", icon: "ti-headset", path: "/support" },
+  { label: "Medical", icon: "ti-heartbeat", path: "/medical-requests" },
   { label: "Settings", icon: "ti-settings", path: "/settings" },
 ];
 

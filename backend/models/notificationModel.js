@@ -33,6 +33,7 @@ const notificationSchema = new mongoose.Schema(
         "support",
         "loyalty",
         "system",
+        "medical",
       ],
       default: "system",
     },
@@ -43,7 +44,14 @@ const notificationSchema = new mongoose.Schema(
 
     relatedModel: {
       type: String,
-      enum: ["bookings", "flights", "refunds", "supporttickets", "loyalty"],
+      enum: [
+        "bookings",
+        "flights",
+        "refunds",
+        "supporttickets",
+        "loyalty",
+        "medicalrecords",
+      ],
     },
 
     isRead: {

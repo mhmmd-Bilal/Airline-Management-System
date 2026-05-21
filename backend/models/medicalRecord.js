@@ -34,6 +34,9 @@ const medicalRecordSchema = new mongoose.Schema(
       default: "open",
       enum: ["open", "reviewed", "resolved"],
     },
+    adminMessage : {
+      type : String
+    },
     attendedAt: {
       type: Date,
     },

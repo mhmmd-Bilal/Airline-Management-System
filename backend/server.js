@@ -19,6 +19,7 @@ import supportRoutes from "./routes/supportRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import revenueRoutes from "./routes/revenueRoutes.js";
 import refundRoutes from "./routes/refundRoutes.js";
+import medicalRoutes from "./routes/medicalRoutes.js";
 
 
 
@@ -45,7 +46,7 @@ const httpServer = createServer(app);
 
 initSocket(httpServer);
 
-app.use("/api/user", userRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/aircraft", aircraftRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/crew", crewRoutes);
@@ -56,5 +57,7 @@ app.use("/api/support", supportRoutes);
 app.use("/api/revenue", revenueRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refunds", refundRoutes);
+app.use("/api/medical", medicalRoutes);
+
 
 httpServer.listen(4000, () => console.log("Server Started"));
