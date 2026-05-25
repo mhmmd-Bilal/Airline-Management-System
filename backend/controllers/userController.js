@@ -243,7 +243,7 @@ const getUserById = expressAsyncHandler(async (req, res) => {
 
 /* -------------------------------------------------------------------------- */
 /*  PUT /api/users/me                                                */
-/*   can update name, email, phone, password                      */
+/*  can update name, email, phone, password                      */
 /* -------------------------------------------------------------------------- */
 const updateUser = expressAsyncHandler(async (req, res) => {
   const user = await Users.findById(req.user._id);

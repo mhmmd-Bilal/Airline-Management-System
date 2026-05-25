@@ -1,7 +1,7 @@
 // controllers/bookingController.js
 import Bookings from "../models/bookingModel.js";
 import Flights from "../models/flightsModel.js";
-import Loyalty from "../models/loyaltyModel.js";
+import Loyalty, { POINT_REDEMPTION_VALUE } from "../models/loyaltyModel.js";
 import Notifications from "../models/notificationModel.js";
 import Refunds from "../models/refundModel.js";
 import { generateBookingPDFs } from "../services/pdfService.js";
@@ -123,7 +123,7 @@ export const getFlightSeats = async (req, res) => {
 // ── POST /api/bookings/create-order ───────────────────
 export const createOrder = async (req, res) => {
   try {
-    const { flightId, passengers, seats, seatClass } = req.body;
+    const { flightId, passengers, seats, seatClass, isCoinsUsed } = req.body;
 
     if (!flightId || !passengers?.length || !seats?.length) {
       return res.status(400).json({
@@ -169,23 +169,39 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const myLoyaltyPoints = await Loyalty.findOne({
+      passengerId: req.user._id,
+    });
+
     const multiplier = CLASS_MULTIPLIER[seatClass] || 1;
     const totalAmount = Math.round(
       flight.price * multiplier * passengers.length,
     );
 
+    const discount = isCoinsUsed
+      ? Number(Math.floor(myLoyaltyPoints.points * POINT_REDEMPTION_VALUE) || 0)
+      : 0;
+
+    
+    const amount = Math.round(totalAmount - discount)
+
+    const finalAmount = Math.max(1, Math.round((totalAmount - discount) * 100));
+
     const order = await razorpay.orders.create({
-      amount: totalAmount * 100,
+      amount: finalAmount,
       currency: "INR",
       receipt: `booking_${Date.now()}`,
-      notes: { flightId: String(flightId), userId: String(req.user._id) },
+      notes: {
+        flightId: String(flightId),
+        userId: String(req.user._id),
+      },
     });
 
     res.status(200).json({
       success: true,
       data: {
         orderId: order.id,
-        amount: totalAmount,
+        amount: amount,
         currency: "INR",
         keyId: process.env.RAZORPAY_KEY_ID,
         bookingMeta: { flightId, passengers, seats, seatClass, totalAmount },

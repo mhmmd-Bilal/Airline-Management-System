@@ -43,6 +43,8 @@ export const getMyLoyalty = expressAsyncHandler(async (req, res) => {
 export const earnPoints = expressAsyncHandler(async (req, res) => {
   const { amount, bookingId } = req.body;
 
+  console.log(amount)
+
   if (!amount || amount <= 0) {
     return res
       .status(400)

@@ -8,10 +8,13 @@ import {
   useCreateOrderMutation,
   useVerifyPaymentMutation,
 } from "../../slices/bookingApiSlice";
-import { useEarnPointsMutation } from "../../slices/loyaltyApiSlice";
 import Loader from "../../components/Loader";
 import UserNavbar from "../../components/UserNavbar";
-import { useGetMyLoyaltyQuery,useRedeemPointsMutation } from "../../slices/loyaltyApiSlice";
+import {
+  useGetMyLoyaltyQuery,
+  useEarnPointsMutation,
+  useRedeemPointsMutation,
+} from "../../slices/loyaltyApiSlice";
 
 /* -------------------------------------------------------------------------- */
 /*                               CONSTANTS                                    */
@@ -264,6 +267,7 @@ export default function FlightDetail() {
   const [step, setStep] = useState(1);
   const [seatClass, setSeatClass] = useState(initClass);
   const [selectedSeats, setSelectedSeats] = useState([]);
+  const [isCoinsUsed, setIsCoinsUsed] = useState(false);
 
   // In flex mode, passengers array is derived from selectedSeats (updated when moving to step 3)
   const [passengers, setPassengers] = useState(() =>
@@ -284,8 +288,10 @@ export default function FlightDetail() {
   const [createOrder] = useCreateOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
   const [earnLoyaltyPoints] = useEarnPointsMutation();
-  const {data : myLoyaltyPoints} = useGetMyLoyaltyQuery()
-  console.log(myLoyaltyPoints)
+  const { data: LoyaltyPoints } = useGetMyLoyaltyQuery();
+  const [redeemLoyaltyPoints] = useRedeemPointsMutation();
+
+  const myLoyaltyPoints = LoyaltyPoints?.data;
 
   const flight = flightData?.data;
 
@@ -414,6 +420,7 @@ export default function FlightDetail() {
         passengers,
         seats: selectedSeats,
         seatClass,
+        isCoinsUsed,
       }).unwrap();
 
       const { orderId, amount, currency, keyId, bookingMeta } = orderRes.data;
@@ -448,7 +455,17 @@ export default function FlightDetail() {
               ...bookingMeta,
             }).unwrap();
             setBookingLoading(false);
-            await earnLoyaltyPoints({ amount, bookingId: booking.data._id });
+            {
+              isCoinsUsed &&
+                (await redeemLoyaltyPoints({
+                  points: myLoyaltyPoints.points,
+                  bookingId: booking.data._id,
+                }).unwrap());
+            }
+            await earnLoyaltyPoints({
+              amount,
+              bookingId: booking.data._id,
+            }).unwrap();
             navigate(`/booking-success/${booking.data._id}`);
           } catch (err) {
             setBookingError(
@@ -910,7 +927,12 @@ export default function FlightDetail() {
                 <div className="flex justify-between font-bold text-[#0C3060] text-base pt-2 border-t border-slate-200">
                   <span>Total</span>
                   <span>
-                    ₹{(pricePerPax * passengers.length).toLocaleString()}
+                    ₹
+                    {(
+                      pricePerPax * passengers.length -
+                      (isCoinsUsed ? myLoyaltyPoints.redemptionValue : 0)
+                    ).toLocaleString()}
+                    {isCoinsUsed && `(After loyalty points used)`}
                   </span>
                 </div>
               </div>
@@ -931,7 +953,61 @@ export default function FlightDetail() {
                   <p className="text-[12px] text-red-600">{bookingError}</p>
                 </div>
               )}
+              {myLoyaltyPoints.redemptionValue >= 1000 && (
+                <button
+                  className={`mb-3 flex w-full items-center justify-between rounded-2xl px-4 py-3 shadow-sm transition-all duration-200 cursor-pointer
+  ${
+    isCoinsUsed
+      ? "border border-green-300 bg-linear-to-r from-green-50 to-emerald-50 opacity-90"
+      : "border border-yellow-300 bg-linear-to-r from-yellow-50 to-amber-50 hover:-translate-y-0.5 hover:border-yellow-400 hover:shadow-md"
+  }`}
+                  onClick={() => setIsCoinsUsed(true)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full
+      ${
+        isCoinsUsed
+          ? "bg-green-100 text-green-600"
+          : "bg-yellow-100 text-yellow-600"
+      }`}
+                    >
+                      <i
+                        className={`text-lg ${
+                          isCoinsUsed ? "ti ti-check" : "ti ti-coins"
+                        }`}
+                      ></i>
+                    </div>
 
+                    <div className="text-left">
+                      <p
+                        className={`text-sm font-semibold ${
+                          isCoinsUsed ? "text-green-700" : "text-gray-800"
+                        }`}
+                      >
+                        {isCoinsUsed
+                          ? "Loyalty Points Applied"
+                          : "Redeem Loyalty Points"}
+                      </p>
+
+                      <p className="text-xs text-gray-500">
+                        {isCoinsUsed
+                          ? "Discount successfully applied"
+                          : "Save instantly on this booking"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm
+    ${isCoinsUsed ? "bg-green-500" : "bg-yellow-500"}`}
+                  >
+                    {isCoinsUsed
+                      ? "Applied"
+                      : `₹${myLoyaltyPoints.redemptionValue}`}
+                  </div>
+                </button>
+              )}
               <button
                 onClick={handlePayment}
                 disabled={bookingLoading}
@@ -954,7 +1030,11 @@ export default function FlightDetail() {
                       <rect x="1" y="4" width="22" height="16" rx="2" />
                       <line x1="1" y1="10" x2="23" y2="10" />
                     </svg>
-                    Pay ₹{(pricePerPax * passengers.length).toLocaleString()}{" "}
+                    Pay ₹
+                    {(
+                      pricePerPax * passengers.length -
+                      (isCoinsUsed ? myLoyaltyPoints.redemptionValue : 0)
+                    ).toLocaleString()}{" "}
                     securely
                   </>
                 )}
@@ -1045,9 +1125,17 @@ export default function FlightDetail() {
             <div className="mt-4 pt-4 border-t border-slate-100">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 text-sm">Total</span>
-                <span className="text-xl font-bold text-[#0C3060]">
+                {/* <span className="text-xl font-bold text-[#0C3060]">
                   {passengers.length > 0 || !flexMode
                     ? `₹${(pricePerPax * Math.max(passengers.length, initPax)).toLocaleString()}`
+                    : `₹${pricePerPax.toLocaleString()} / seat`}
+                </span> */}
+                <span className="text-xl font-bold text-[#0C3060]">
+                  {passengers.length > 0 || !flexMode
+                    ? `₹${(
+                        pricePerPax * Math.max(passengers.length, initPax) -
+                        (isCoinsUsed ? myLoyaltyPoints.redemptionValue : 0)
+                      ).toLocaleString()}`
                     : `₹${pricePerPax.toLocaleString()} / seat`}
                 </span>
               </div>
@@ -1057,7 +1145,6 @@ export default function FlightDetail() {
                 </p>
               )}
             </div>
-            
           </div>
         </div>
       </div>
