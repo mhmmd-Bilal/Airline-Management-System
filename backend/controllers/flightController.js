@@ -1,8 +1,11 @@
 // controllers/flightController.js
 import Bookings from "../models/bookingModel.js";
+import Crews from "../models/crewModel.js";
 import Flights from "../models/flightsModel.js";
 import Attendance from "../models/attendanceModel.js";
 import expressAsyncHandler from "express-async-handler";
+import { sendCrewAssignmentEmailsForFlight } from "../services/mailService.js";
+import { createNotification } from "../controllers/notificationController.js";
 
 // ── @desc    Get all flights (paginated, filtered, searched)
 // ── @route   GET /api/flights
@@ -353,6 +356,31 @@ export const createFlight = expressAsyncHandler(async (req, res) => {
     availableSeats: totalSeats,
     price,
   });
+
+  const crews = await Crews.find({
+    _id: { $in: crewIds },
+  }).select("userId");
+
+  await Promise.all(
+    crews.map((crew) =>
+      createNotification({
+        recipient: crew.userId,
+        roleTarget: "crew",
+        title: "New Flight Assigned",
+        message: `You have been assigned to flight ${flight.flightNumber}. Please check your schedule.`,
+        type: "flight",
+        relatedId: flight._id,
+        relatedModel: "flights",
+        sentBy: req.user._id,
+      }),
+    ),
+  );
+
+  if (crewIds?.length) {
+    sendCrewAssignmentEmailsForFlight(crewIds, flight).catch((err) =>
+      console.error("[createFlight] Email error:", err.message),
+    );
+  }
 
   const populated = await flight.populate([
     { path: "aircraftId", select: "registrationNumber model capacity" },
