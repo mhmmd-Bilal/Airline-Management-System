@@ -1,6 +1,6 @@
 // routes/bookingRoutes.js
 import express from "express";
-import { protect } from "../middlewares/authMiddleware.js";
+import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 import {
   getMyBookings,
   getBookingById,
@@ -13,10 +13,12 @@ import {
   downloadTicket,
   downloadInvoice,
   getBookingsByFlightId,
+  getAllBookings,
 } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
+router.get("/", protect, adminOnly, getAllBookings);
 router.get("/my", protect, getMyBookings);
 router.get("/stats", protect, getBookingStats); // admin
 router.get("/:id", protect, getBookingById);

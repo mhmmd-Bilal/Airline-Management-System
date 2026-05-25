@@ -16,7 +16,10 @@ import {
   FlightCard,
   PunchCard,
 } from "../../components/crew/CrewShared";
-import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
+import {
+  useGetCrewByUserIdQuery,
+  useGetMyCrewProfileQuery,
+} from "../../slices/crewApiSlice";
 
 // ── Roles that are airborne ────────────────────────────
 const AIRBORNE_ROLES = [
@@ -48,10 +51,11 @@ export default function CrewDashboard() {
   const firstName =
     name.split(" ").find((w) => !w.includes(".")) || name.split(" ")[0];
 
-  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
-    userData?._id,
-    { skip: !userData?._id },
-  );
+  const {
+    data: crewData,
+    isLoading: crewLoading,
+    error,
+  } = useGetMyCrewProfileQuery();
 
   const crew = crewData?.data;
   const crewId = crew?._id;

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLoginUserMutation } from "../slices/userApiSlice";
 import { useSelector, useDispatch } from "react-redux";
-import { setCredentails } from "../slices/authSlice";
+import { setCredentials } from "../slices/authSlice";
 import { toast } from "react-toastify";
 
 const EmailIcon = () => (
@@ -133,7 +133,7 @@ export default function LoginScreen() {
     try {
       if (validate()) {
         let data = await loginUser({ email, password }).unwrap();
-        dispatch(setCredentails({ ...data }));
+        dispatch(setCredentials({ ...data }));
         toast.success(data?.message)
         navigate('/')
       }

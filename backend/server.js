@@ -21,8 +21,7 @@ import revenueRoutes from "./routes/revenueRoutes.js";
 import refundRoutes from "./routes/refundRoutes.js";
 import medicalRoutes from "./routes/medicalRoutes.js";
 
-
-
+import "./cron/attendanceCron.js";
 import { startFlightStatusCron } from "./cron/flightStatusCron.js";
 import { initSocket } from "./services/socketService.js";
 
@@ -58,6 +57,5 @@ app.use("/api/revenue", revenueRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/refunds", refundRoutes);
 app.use("/api/medical", medicalRoutes);
-
 
 httpServer.listen(4000, () => console.log("Server Started"));

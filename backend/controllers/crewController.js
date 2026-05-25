@@ -1,6 +1,8 @@
 // controllers/crewController.js
 import Crews from "../models/crewModel.js";
 import Users from "../models/userModel.js";
+import Attendance from "../models/attendanceModel.js";
+import Flights from "../models/flightsModel.js";
 import bcrypt from "bcrypt";
 import expressAsyncHandler from "express-async-handler";
 
@@ -14,12 +16,10 @@ export const getMyCrewProfile = expressAsyncHandler(async (req, res) => {
   );
 
   if (!crew) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message: "Crew profile not found for this user",
-      });
+    return res.status(404).json({
+      success: false,
+      message: "Crew profile not found for this user",
+    });
   }
 
   res.status(200).json({ success: true, data: crew });
@@ -74,13 +74,18 @@ export const getAllCrew = expressAsyncHandler(async (req, res) => {
   });
 });
 
-// ── @desc    Get crew profile by User _id
+// ── @desc    Get full crew profile by User _id
 // ── @route   GET /api/crew/by-user/:userId
 // ── @access  Crew / Admin
 export const getCrewByUserId = expressAsyncHandler(async (req, res) => {
-  const crew = await Crews.findOne({ userId: req.params.userId }).populate(
+  const { userId } = req.params;
+
+  // ── Fix: find crew where userId field === userId param ──
+  // Crews.findById(userId) was looking up crew by crew._id
+  // but userId param is the user's _id, not the crew doc's _id
+  const crew = await Crews.findById(userId).populate(
     "userId",
-    "name email phone role",
+    "name email phone role createdAt",
   );
 
   if (!crew) {
@@ -89,7 +94,186 @@ export const getCrewByUserId = expressAsyncHandler(async (req, res) => {
       .json({ success: false, message: "Crew profile not found" });
   }
 
-  res.status(200).json({ success: true, data: crew });
+  const crewId = crew._id;
+  const now = new Date();
+
+  const [allAttendance, allFlights, medicalRecords] = await Promise.all([
+    // ── staffId is the user _id ────────────────────────
+    Attendance.find({ staffId: crew.userId }).sort({ date: -1 }).lean(), // flightId removed from model — no populate
+
+    Flights.find({ crewIds: crewId })
+      .populate("aircraftId", "registrationNumber model capacity")
+      .populate({
+        path: "crewIds",
+        select: "userId role employeeId currentStatus",
+        populate: { path: "userId", select: "name email phone" },
+      })
+      .sort({ departureTime: -1 })
+      .lean(),
+
+    (await import("../models/medicalRecord.js")).default
+      .find({ reportedBy: crew.userId })
+      .populate("flightId", "flightNumber source destination departureTime")
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
+
+  // ── Attendance analytics ───────────────────────────
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthAttendance = allAttendance.filter(
+    (a) => new Date(a.date) >= thisMonthStart,
+  );
+
+  const totalHoursWorked = allAttendance.reduce((sum, a) => {
+    if (a.clockIn && a.clockOut)
+      return sum + (new Date(a.clockOut) - new Date(a.clockIn)) / 3600000;
+    return sum;
+  }, 0);
+
+  const monthHoursWorked = thisMonthAttendance.reduce((sum, a) => {
+    if (a.clockIn && a.clockOut)
+      return sum + (new Date(a.clockOut) - new Date(a.clockIn)) / 3600000;
+    return sum;
+  }, 0);
+
+  const attendanceBreakdown = allAttendance.reduce(
+    (acc, a) => {
+      acc[a.status] = (acc[a.status] || 0) + 1;
+      return acc;
+    },
+    { present: 0, absent: 0, leave: 0, "half-day": 0 },
+  );
+
+  const totalRecords = allAttendance.length;
+  const attendedDays =
+    (attendanceBreakdown.present || 0) + (attendanceBreakdown["half-day"] || 0);
+  const attendanceRate =
+    totalRecords > 0 ? Math.round((attendedDays / totalRecords) * 100) : 0;
+
+  const todayStr = now.toISOString().slice(0, 10);
+  const todayRecord =
+    allAttendance.find(
+      (a) => new Date(a.date).toISOString().slice(0, 10) === todayStr,
+    ) ?? null;
+
+  const isPunchedIn = !!(todayRecord?.clockIn && !todayRecord?.clockOut);
+
+  // ── Flight analytics ───────────────────────────────
+  const flightBreakdown = allFlights.reduce(
+    (acc, f) => {
+      acc[f.status] = (acc[f.status] || 0) + 1;
+      return acc;
+    },
+    {
+      scheduled: 0,
+      boarding: 0,
+      "in-flight": 0,
+      delayed: 0,
+      completed: 0,
+      cancelled: 0,
+    },
+  );
+
+  const activeFlights = allFlights.filter((f) =>
+    ["boarding", "in-flight"].includes(f.status),
+  );
+  const upcomingFlights = allFlights.filter(
+    (f) =>
+      ["scheduled", "delayed"].includes(f.status) &&
+      new Date(f.departureTime) > now,
+  );
+  const completedFlights = allFlights.filter((f) => f.status === "completed");
+
+  const totalFlightHours = completedFlights.reduce((sum, f) => {
+    if (f.departureTime && f.arrivalTime)
+      return (
+        sum + (new Date(f.arrivalTime) - new Date(f.departureTime)) / 3600000
+      );
+    return sum;
+  }, 0);
+
+  const lastFlight = completedFlights[0] ?? null;
+  const nextFlight =
+    [...upcomingFlights].sort(
+      (a, b) => new Date(a.departureTime) - new Date(b.departureTime),
+    )[0] ?? null;
+
+  const licenseExpiringSoon =
+    crew.licenseExpiry &&
+    new Date(crew.licenseExpiry) <
+      new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  const medicalDueSoon =
+    crew.medicalNextDue &&
+    new Date(crew.medicalNextDue) <
+      new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      profile: {
+        _id: crew._id,
+        employeeId: crew.employeeId,
+        role: crew.role,
+        experience: crew.experience,
+        licenseNumber: crew.licenseNumber,
+        licenseExpiry: crew.licenseExpiry,
+        licenseExpiringSoon,
+        nationality: crew.nationality,
+        dateOfBirth: crew.dateOfBirth,
+        currentStatus: crew.currentStatus,
+        salary: crew.salary,
+        medicalStatus: crew.medicalStatus,
+        medicalLastChecked: crew.medicalLastChecked,
+        medicalNextDue: crew.medicalNextDue,
+        medicalDueSoon,
+        createdAt: crew.createdAt,
+        userId: crew.userId,
+      },
+      attendance: {
+        records: allAttendance,
+        todayRecord,
+        isPunchedIn,
+        breakdown: attendanceBreakdown,
+        totalRecords,
+        attendanceRate,
+        totalHoursWorked: Math.round(totalHoursWorked * 10) / 10,
+        monthHoursWorked: Math.round(monthHoursWorked * 10) / 10,
+        thisMonthRecords: thisMonthAttendance,
+      },
+      flights: {
+        all: allFlights,
+        active: activeFlights,
+        upcoming: upcomingFlights,
+        completed: completedFlights,
+        breakdown: flightBreakdown,
+        totalCount: allFlights.length,
+        totalFlightHours: Math.round(totalFlightHours * 10) / 10,
+        lastFlight,
+        nextFlight,
+      },
+      medicalRecords: {
+        records: medicalRecords,
+        total: medicalRecords.length,
+        open: medicalRecords.filter((r) => r.status === "open").length,
+        resolved: medicalRecords.filter((r) => r.status === "resolved").length,
+      },
+      summary: {
+        totalFlights: allFlights.length,
+        completedFlights: completedFlights.length,
+        attendanceRate,
+        totalFlightHours: Math.round(totalFlightHours * 10) / 10,
+        totalHoursWorked: Math.round(totalHoursWorked * 10) / 10,
+        currentStatus: crew.currentStatus,
+        medicalStatus: crew.medicalStatus,
+        licenseExpiringSoon,
+        medicalDueSoon,
+        isPunchedIn,
+        activeFlightCount: activeFlights.length,
+        upcomingFlightCount: upcomingFlights.length,
+      },
+    },
+  });
 });
 
 // ── @desc    Get crew stats
@@ -178,12 +362,10 @@ export const createCrew = expressAsyncHandler(async (req, res) => {
       .status(400)
       .json({ success: false, message: "Email already registered" });
   if (employeeIdExists)
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: `Employee ID ${employeeId} already exists`,
-      });
+    return res.status(400).json({
+      success: false,
+      message: `Employee ID ${employeeId} already exists`,
+    });
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -266,12 +448,10 @@ export const updateCrew = expressAsyncHandler(async (req, res) => {
   if (employeeId && employeeId !== crew.employeeId) {
     const empExists = await Crews.findOne({ employeeId });
     if (empExists)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: `Employee ID ${employeeId} already exists`,
-        });
+      return res.status(400).json({
+        success: false,
+        message: `Employee ID ${employeeId} already exists`,
+      });
   }
 
   user.name = name ?? user.name;

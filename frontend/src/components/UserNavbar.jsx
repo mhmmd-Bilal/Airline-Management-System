@@ -5,6 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../slices/authSlice";
 import NotificationBell from "./NotificationBell";
 import { useGetBookedFlightsQuery } from "../slices/flightApiSlice";
+import { useLogoutUserMutation } from "../slices/userApiSlice";
 
 const NAV_LINKS = [
   { label: "Home", to: "/", authRequired: false },
@@ -166,9 +167,16 @@ export default function UserNavbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate("/");
+  const [logoutUser] = useLogoutUserMutation();
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser().unwrap()
+      dispatch(logout());
+      navigate("/");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const isActive = (to) =>

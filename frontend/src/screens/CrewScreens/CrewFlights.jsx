@@ -2,7 +2,9 @@
 import { useState } from "react";
 import { useSelector } from "react-redux";
 import { useGetFlightsByCrewIdQuery } from "../../slices/flightApiSlice";
-import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
+import {
+  useGetMyCrewProfileQuery,
+} from "../../slices/crewApiSlice";
 import {
   FlightCard,
   Card,
@@ -86,19 +88,11 @@ export default function CrewFlights() {
 
   const navigate = useNavigate();
 
-  // ── Step 1: get Crew doc by User _id ──────────────────
-  // useGetCrewByUserIdQuery queries GET /api/crew/by-user/:userId
-  // which finds Crew where userId === param
-  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
-    userData?._id,
-    { skip: !userData?._id },
-  );
+  const { data: crewData, isLoading: crewLoading } = useGetMyCrewProfileQuery();
 
   const crew = crewData?.data;
   const crewId = crew?._id;
 
-  // ── Step 2: get flights using Crew _id ────────────────
-  // backend route: GET /api/flights/crew/:crewId
   const {
     data: flightData,
     isLoading: flightLoading,

@@ -5,21 +5,20 @@ const USER_URL = "/api/users";
 
 const userApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-
     /* ── Public ── */
     loginUser: builder.mutation({
       query: (data) => ({
-        url:    `${USER_URL}/login`,
+        url: `${USER_URL}/login`,
         method: "POST",
-        body:   data,
+        body: data,
       }),
     }),
 
     registerUser: builder.mutation({
       query: (data) => ({
-        url:    `${USER_URL}/register`,
+        url: `${USER_URL}/register`,
         method: "POST",
-        body:   data,
+        body: data,
       }),
     }),
 
@@ -37,7 +36,7 @@ const userApiSlice = apiSlice.injectEndpoints({
 
     getAllUsers: builder.query({
       query: ({ search = "", page = 1, limit = 15 } = {}) => ({
-        url:    USER_URL,
+        url: USER_URL,
         params: { search, page, limit },
       }),
       providesTags: ["User"],
@@ -49,22 +48,28 @@ const userApiSlice = apiSlice.injectEndpoints({
     }),
 
     updateUser: builder.mutation({
-      query: ({ id, ...data }) => ({
-        url:    `${USER_URL}/${id}`,
+      query: (data) => ({
+        url: `${USER_URL}/me`,
         method: "PUT",
-        body:   data,
+        body: data,
       }),
       invalidatesTags: ["User"],
     }),
 
     deleteUser: builder.mutation({
       query: (id) => ({
-        url:    `${USER_URL}/${id}`,
+        url: `${USER_URL}/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["User"],
     }),
 
+    logoutUser: builder.mutation({
+      query: () => ({
+        url: `${USER_URL}/logout`,
+        method: "POST",
+      }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -78,4 +83,5 @@ export const {
   useGetUserByIdQuery,
   useUpdateUserMutation,
   useDeleteUserMutation,
+  useLogoutUserMutation,
 } = userApiSlice;

@@ -1,6 +1,7 @@
 // controllers/flightController.js
 import Bookings from "../models/bookingModel.js";
 import Flights from "../models/flightsModel.js";
+import Attendance from "../models/attendanceModel.js";
 import expressAsyncHandler from "express-async-handler";
 
 // ── @desc    Get all flights (paginated, filtered, searched)
@@ -27,7 +28,7 @@ export const getAllFlights = expressAsyncHandler(async (req, res) => {
       select: "userId role employeeId currentStatus",
       populate: { path: "userId", select: "name email phone" },
     })
-    .sort({ departureTime: 1 })
+    .sort({ departureTime: -1 })
     .skip((Number(page) - 1) * Number(limit))
     .limit(Number(limit));
 
@@ -65,20 +66,101 @@ export const getFlightById = expressAsyncHandler(async (req, res) => {
 // ── @route   GET /api/flights/stats
 // ── @access  Admin
 export const getFlightStats = expressAsyncHandler(async (req, res) => {
-  const [total, scheduled, delayed, boarding, inFlight, completed, cancelled] =
-    await Promise.all([
-      Flights.countDocuments(),
-      Flights.countDocuments({ status: "scheduled" }),
-      Flights.countDocuments({ status: "delayed" }),
-      Flights.countDocuments({ status: "boarding" }),
-      Flights.countDocuments({ status: "in-flight" }),
-      Flights.countDocuments({ status: "completed" }),
-      Flights.countDocuments({ status: "cancelled" }),
-    ]);
+  // today start/end
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const [
+    total,
+    scheduled,
+    delayed,
+    boarding,
+    inFlight,
+    completed,
+    cancelled,
+
+    // today stats
+    todayTotal,
+    todayScheduled,
+    todayDelayed,
+    todayBoarding,
+    todayInFlight,
+    todayCompleted,
+    todayCancelled,
+  ] = await Promise.all([
+    // overall stats
+    Flights.countDocuments(),
+    Flights.countDocuments({ status: "scheduled" }),
+    Flights.countDocuments({ status: "delayed" }),
+    Flights.countDocuments({ status: "boarding" }),
+    Flights.countDocuments({ status: "in-flight" }),
+    Flights.countDocuments({ status: "completed" }),
+    Flights.countDocuments({ status: "cancelled" }),
+
+    // today stats
+    Flights.countDocuments({
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "scheduled",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "delayed",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "boarding",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "in-flight",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "completed",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+
+    Flights.countDocuments({
+      status: "cancelled",
+      departureTime: {
+        $gte: startOfToday,
+        $lte: endOfToday,
+      },
+    }),
+  ]);
 
   res.status(200).json({
     success: true,
     data: {
+      // existing response
       total,
       scheduled,
       delayed,
@@ -86,6 +168,17 @@ export const getFlightStats = expressAsyncHandler(async (req, res) => {
       inFlight,
       completed,
       cancelled,
+
+      // today stats
+      today: {
+        total: todayTotal,
+        scheduled: todayScheduled,
+        delayed: todayDelayed,
+        boarding: todayBoarding,
+        inFlight: todayInFlight,
+        completed: todayCompleted,
+        cancelled: todayCancelled,
+      },
     },
   });
 });
@@ -126,8 +219,11 @@ export const createFlight = expressAsyncHandler(async (req, res) => {
     });
   }
 
+  const newDep = new Date(departureTime);
+  const newArr = new Date(arrivalTime);
+
   // ── Arrival must be after departure ──
-  if (new Date(arrivalTime) <= new Date(departureTime)) {
+  if (newArr <= newDep) {
     return res.status(400).json({
       success: false,
       message: "Arrival time must be after departure time",
@@ -153,7 +249,86 @@ export const createFlight = expressAsyncHandler(async (req, res) => {
     if (aircraftConflict) {
       return res.status(400).json({
         success: false,
-        message: `Aircraft is already assigned to flight ${aircraftConflict.flightNumber} which is currently ${aircraftConflict.status}`,
+        message: `Aircraft is already assigned to flight ${aircraftConflict.flightNumber} (${aircraftConflict.status})`,
+      });
+    }
+  }
+
+  // ── Crew availability check ─────────────────────────────────────────────────
+  // A crew member is considered UNAVAILABLE if they are already assigned to
+  // another flight whose time window overlaps with the new flight's window.
+  //
+  // Overlap condition (two intervals [A_dep, A_arr] and [B_dep, B_arr] overlap):
+  //   A_dep < B_arr  AND  A_arr > B_dep
+  //
+  // We only check flights in active/upcoming statuses — no point checking
+  // completed or cancelled flights.
+  // ────────────────────────────────────────────────────────────────────────────
+  if (crewIds && crewIds.length > 0) {
+    const busyStatuses = ["scheduled", "boarding", "in-flight", "delayed"];
+
+    // Find any flight that:
+    //  1. contains at least one of our requested crew members
+    //  2. is in an active status
+    //  3. time window overlaps with the new flight's window
+    const conflictingFlights = await Flights.find({
+      crewIds: { $in: crewIds },
+      status: { $in: busyStatuses },
+      departureTime: { $lt: newArr }, // existing flight departs before new one arrives
+      arrivalTime: { $gt: newDep }, // existing flight arrives after new one departs
+    })
+      .select(
+        "flightNumber source destination departureTime arrivalTime status crewIds",
+      )
+      .lean();
+
+    if (conflictingFlights.length > 0) {
+      // Build a per-crew conflict map so the error message is specific
+      const conflictMap = {}; // crewId → [conflicting flight descriptions]
+
+      for (const conflict of conflictingFlights) {
+        for (const cId of conflict.crewIds) {
+          const cIdStr = String(cId);
+          // Only flag crew members that are in BOTH the requested list and this conflict
+          if (crewIds.map(String).includes(cIdStr)) {
+            if (!conflictMap[cIdStr]) conflictMap[cIdStr] = [];
+            conflictMap[cIdStr].push(
+              `${conflict.flightNumber} (${conflict.source}→${conflict.destination}, ` +
+                `${new Date(conflict.departureTime).toISOString().slice(0, 16).replace("T", " ")} – ` +
+                `${new Date(conflict.arrivalTime).toISOString().slice(0, 16).replace("T", " ")}, ` +
+                `${conflict.status})`,
+            );
+          }
+        }
+      }
+
+      // Populate crew names for a readable error
+      const Crews = (await import("../models/crewModel.js")).default;
+      const conflictCrewIds = Object.keys(conflictMap);
+      const crewDocs = await Crews.find({ _id: { $in: conflictCrewIds } })
+        .populate("userId", "name")
+        .lean();
+
+      const crewNameMap = {};
+      crewDocs.forEach((c) => {
+        crewNameMap[String(c._id)] =
+          c.userId?.name ?? c.employeeId ?? String(c._id);
+      });
+
+      const lines = conflictCrewIds.map(
+        (cId) => `• ${crewNameMap[cId] ?? cId}: ${conflictMap[cId].join(", ")}`,
+      );
+
+      return res.status(400).json({
+        success: false,
+        message:
+          `The following crew member${lines.length > 1 ? "s are" : " is"} already ` +
+          `assigned to overlapping flight${lines.length > 1 ? "s" : ""}:\n${lines.join("\n")}`,
+        conflicts: conflictCrewIds.map((cId) => ({
+          crewId: cId,
+          name: crewNameMap[cId] ?? cId,
+          flights: conflictMap[cId],
+        })),
       });
     }
   }
@@ -175,7 +350,7 @@ export const createFlight = expressAsyncHandler(async (req, res) => {
     aircraftId: aircraftId || null,
     crewIds: crewIds || [],
     totalSeats,
-    availableSeats: totalSeats, // always start full
+    availableSeats: totalSeats,
     price,
   });
 
@@ -318,6 +493,33 @@ export const updateFlight = expressAsyncHandler(async (req, res) => {
         $set: {
           status: "completed",
           completedAt: new Date(),
+        },
+      },
+    );
+    await Attendance.updateMany(
+      {
+        staffId: { $in: flight.crewIds },
+        clockOut: null,
+      },
+      {
+        $set: {
+          status: "present",
+          activeFlightId: null,
+        },
+      },
+    );
+  }
+
+  if (derivedStatus === "boarding") {
+    await Attendance.updateMany(
+      {
+        staffId: { $in: flight.crewIds },
+        clockOut: null,
+      },
+      {
+        $set: {
+          status: "on-flight",
+          activeFlightId: flight._id,
         },
       },
     );
@@ -478,11 +680,9 @@ export const getBookedFlights = expressAsyncHandler(async (req, res) => {
     success: true,
     count: flights.length,
     data: flights,
-    bookings 
+    bookings,
   });
 });
-
-
 
 // ── @desc    Track flight for logged-in passenger
 // ── @route   GET /api/flights/track/:flightId
@@ -534,12 +734,9 @@ export const trackMyFlight = expressAsyncHandler(async (req, res) => {
   const totalDuration =
     new Date(flight.arrivalTime) - new Date(flight.departureTime);
 
-  const completedDuration =
-    now - new Date(flight.departureTime);
+  const completedDuration = now - new Date(flight.departureTime);
 
-  let progress = Math.round(
-    (completedDuration / totalDuration) * 100
-  );
+  let progress = Math.round((completedDuration / totalDuration) * 100);
 
   progress = Math.max(0, Math.min(progress, 100));
 
@@ -568,8 +765,8 @@ export const trackMyFlight = expressAsyncHandler(async (req, res) => {
         actualArrivalTime: flight.actualArrivalTime,
         progress,
         aircraft: flight.aircraftId,
-        totalSeats : flight.totalSeats,
-        availableSeats : flight.availableSeats
+        totalSeats: flight.totalSeats,
+        availableSeats: flight.availableSeats,
       },
     },
   });

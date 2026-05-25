@@ -252,7 +252,7 @@ function RecordModal({ record, onClose }) {
 /* ─────────────────────────────────────────────── main page ── */
 
 export default function MedicalRequestsPage() {
-  const [filters, setFilters] = useState({ status: "all", userType: "all" });
+  const [filters, setFilters] = useState({ status: "all"});
   const [page,    setPage]    = useState(1);
   const [active,  setActive]  = useState(null);   // record being viewed/edited
 

@@ -82,6 +82,13 @@ const bookingApiSlice = apiSlice.injectEndpoints({
       }),
       providesTags: ["Booking"],
     }),
+    getAllBookings: builder.query({
+      query: ({ status = "all", search = "", page = 1, limit = 15 } = {}) => ({
+        url: "/api/bookings",
+        params: { status, search, page, limit },
+      }),
+      providesTags: ["Booking"],
+    }),
   }),
 });
 
@@ -94,4 +101,5 @@ export const {
   // useCancelBookingMutation,
   useGetBookingStatsQuery,
   useGetBookingsByFlightIdQuery,
+  useGetAllBookingsQuery
 } = bookingApiSlice;

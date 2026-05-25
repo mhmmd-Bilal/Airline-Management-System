@@ -11,6 +11,7 @@ import {
 import { useEarnPointsMutation } from "../../slices/loyaltyApiSlice";
 import Loader from "../../components/Loader";
 import UserNavbar from "../../components/UserNavbar";
+import { useGetMyLoyaltyQuery,useRedeemPointsMutation } from "../../slices/loyaltyApiSlice";
 
 /* -------------------------------------------------------------------------- */
 /*                               CONSTANTS                                    */
@@ -283,6 +284,8 @@ export default function FlightDetail() {
   const [createOrder] = useCreateOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
   const [earnLoyaltyPoints] = useEarnPointsMutation();
+  const {data : myLoyaltyPoints} = useGetMyLoyaltyQuery()
+  console.log(myLoyaltyPoints)
 
   const flight = flightData?.data;
 
@@ -1054,6 +1057,7 @@ export default function FlightDetail() {
                 </p>
               )}
             </div>
+            
           </div>
         </div>
       </div>

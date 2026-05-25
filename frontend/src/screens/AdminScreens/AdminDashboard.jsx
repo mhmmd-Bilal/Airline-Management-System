@@ -195,6 +195,7 @@ export default function AdminDashboard() {
   const cs = crewStats?.data;
   const rv = revenueStats?.stats;
   const monthly = revenueYearly?.monthly ?? [];
+  const todaysFlightStats = flightStats?.data?.today
 
   const recentFlights = activeFlightsData?.data ?? [];
 
@@ -287,7 +288,7 @@ export default function AdminDashboard() {
           },
           {
             label: "Completed today",
-            value: fs?.completed ?? "—",
+            value: todaysFlightStats?.completed ?? "—",
             icon: "ti-circle-check",
             color: "text-green-700",
             bg: "bg-green-50",

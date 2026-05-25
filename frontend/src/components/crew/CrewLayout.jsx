@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGetTodayAttendanceQuery } from "../../slices/attendanceApiSlice";
-import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
+import { useGetMyCrewProfileQuery } from "../../slices/crewApiSlice";
 import NotificationBell from "../NotificationBell";
+import { useLogoutUserMutation } from "../../slices/userApiSlice";
+import { logout } from "../../slices/authSlice";
 
 const navItems = [
   {
@@ -98,15 +100,25 @@ export default function CrewLayout() {
 
   const name = userData?.name ?? "Crew Member";
 
-  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
-    userData?._id,
-    { skip: !userData?._id },
-  );
+  const { data: crewData, isLoading: crewLoading } = useGetMyCrewProfileQuery();
+  const [logoutUser] = useLogoutUserMutation();
+
+  const dispatch = useDispatch();
 
   const crew = crewData?.data;
 
   const { data: attendanceData } = useGetTodayAttendanceQuery();
   const todayAttendance = attendanceData?.data ?? null;
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser().unwrap();
+      dispatch(logout());
+      navigate("/");
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const pageTitle =
     navItems.find((n) =>
@@ -235,6 +247,12 @@ export default function CrewLayout() {
               cls="bg-blue-100 text-blue-800"
             />
             <NotificationBell theme="light" notifPath="/crew/notifications" />
+            <button
+              onClick={handleLogout}
+              className="w-9 h-9 rounded-lg bg-white/[0.08] hover:bg-white/[0.15] flex items-center justify-center transition relative cursor-pointer border-b-blue-50"
+            >
+              <i className="ti ti-logout text-lg"></i>
+            </button>
             <Avatar name={name} size="sm" />
           </div>
         </div>

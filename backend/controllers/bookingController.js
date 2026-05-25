@@ -415,18 +415,91 @@ export const verifyPayment = async (req, res) => {
 // ── GET /api/bookings/stats (admin) ───────────────────
 export const getBookingStats = async (req, res) => {
   try {
-    const [total, confirmed, cancelled, completed, revenue] = await Promise.all(
-      [
-        Bookings.countDocuments(),
-        Bookings.countDocuments({ status: "confirmed" }),
-        Bookings.countDocuments({ status: "cancelled" }),
-        Bookings.countDocuments({ status: "completed" }),
-        Bookings.aggregate([
-          { $match: { paymentStatus: "paid" } },
-          { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-        ]),
-      ],
-    );
+    const [
+      total,
+      confirmed,
+      cancelled,
+      completed,
+
+      // overall revenue
+      revenue,
+
+      // confirmed revenue
+      confirmedRevenue,
+
+      // cancelled revenue
+      cancelledRevenue,
+
+      // completed revenue
+      completedRevenue,
+    ] = await Promise.all([
+      Bookings.countDocuments(),
+
+      Bookings.countDocuments({ status: "confirmed" }),
+
+      Bookings.countDocuments({ status: "cancelled" }),
+
+      Bookings.countDocuments({ status: "completed" }),
+
+      // total paid revenue
+      Bookings.aggregate([
+        { $match: { paymentStatus: "paid" } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+
+      // confirmed revenue
+      Bookings.aggregate([
+        {
+          $match: {
+            status: "confirmed",
+            paymentStatus: "paid",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+
+      // cancelled revenue
+      Bookings.aggregate([
+        {
+          $match: {
+            status: "cancelled",
+            paymentStatus: "refunded",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+
+      // completed revenue
+      Bookings.aggregate([
+        {
+          $match: {
+            status: "completed",
+            paymentStatus: "paid",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalAmount" },
+          },
+        },
+      ]),
+    ]);
 
     res.status(200).json({
       success: true,
@@ -435,11 +508,21 @@ export const getBookingStats = async (req, res) => {
         confirmed,
         cancelled,
         completed,
+
         revenue: revenue[0]?.total || 0,
+
+        confirmedRevenue: confirmedRevenue[0]?.total || 0,
+
+        cancelledRevenue: cancelledRevenue[0]?.total || 0,
+
+        completedRevenue: completedRevenue[0]?.total || 0,
       },
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -604,4 +687,41 @@ export const getBookingsByFlightId = expressAsyncHandler(async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
+});
+
+/* -------------------------------------------------------------------------- */
+/*  GET /api/bookings  (admin)                                                 */
+/*  Paginated list with status filter + search by bookingReference            */
+/* -------------------------------------------------------------------------- */
+export const getAllBookings = expressAsyncHandler(async (req, res) => {
+  const { status, search, page = 1, limit = 15 } = req.query;
+
+  const query = {};
+  if (status && status !== "all") query.status = status;
+
+  if (search) {
+    query.$or = [{ bookingReference: { $regex: search, $options: "i" } }];
+  }
+
+  const total = await Bookings.countDocuments(query);
+  const bookings = await Bookings.find(query)
+    .populate("passengerId", "name email phone")
+    .populate({
+      path: "flightId",
+      select:
+        "flightNumber source destination departureTime arrivalTime status",
+      populate: { path: "aircraftId", select: "model registrationNumber" },
+    })
+    .sort({ createdAt: -1 })
+    .skip((Number(page) - 1) * Number(limit))
+    .limit(Number(limit))
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    total,
+    page: Number(page),
+    totalPages: Math.ceil(total / Number(limit)),
+    data: bookings,
+  });
 });

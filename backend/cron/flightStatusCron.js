@@ -1,6 +1,9 @@
 // cron/flightStatusCron.js
 import cron from "node-cron";
 import Flights from "../models/flightsModel.js";
+import Attendance from "../models/attendanceModel.js";
+import Crew from "../models/crewModel.js";
+import Bookings from "../models/flightsModel.js";
 
 const BOARDING_WINDOW_MINUTES = 30;
 const MISSED_CANCEL_HOURS = 3;
@@ -71,6 +74,23 @@ async function completeFlights(now) {
 
   const result = await Flights.bulkWrite(bulkOps, { ordered: false });
 
+  await Promise.all(
+    flights.map((f) =>
+      Bookings.updateMany(
+        {
+          flightId: f._id,
+          status: { $ne: "cancelled" },
+        },
+        {
+          $set: {
+            status: "completed",
+            completedAt: new Date(),
+          },
+        },
+      ),
+    ),
+  );
+
   if (result.modifiedCount > 0) {
     log.ok(
       `→ completed: ${result.modifiedCount} flight(s) | ` +
@@ -106,6 +126,59 @@ async function transition({ label, filter, update }) {
     log.ok(`${label}: ${result.modifiedCount} flight(s) updated`);
   }
   return result;
+}
+
+async function autoCloseCrewAttendance(now) {
+  // Find all active attendances
+  const attendances = await Attendance.find({
+    clockOut: null,
+  }).populate("staffId");
+
+  if (!attendances.length) return 0;
+
+  let closedCount = 0;
+
+  for (const attendance of attendances) {
+    // Check if crew has active flights
+    const activeFlight = await Flights.findOne({
+      crewIds: attendance.staffId._id,
+      status: {
+        $in: ["boarding", "taxi-out", "departed", "in-flight", "landing"],
+      },
+    });
+
+    // Still working on flight
+    if (activeFlight) continue;
+
+    // Shift not ended yet
+    if (attendance.shiftEndsAt && attendance.shiftEndsAt > now) {
+      continue;
+    }
+
+    // Auto clock out
+    attendance.clockOut = now;
+
+    attendance.autoClosed = true;
+
+    attendance.workingMinutes = Math.floor(
+      (attendance.clockOut - attendance.clockIn) / 60000,
+    );
+
+    await attendance.save();
+
+    // Update crew availability
+    await Crew.findByIdAndUpdate(attendance.staffId._id, {
+      currentStatus: "available",
+    });
+
+    closedCount++;
+  }
+
+  if (closedCount > 0) {
+    log.ok(`Auto-closed ${closedCount} attendance record(s)`);
+  }
+
+  return closedCount;
 }
 
 /* ─────────────────────────────────────────────────────── */
@@ -163,6 +236,8 @@ async function runFlightStatusEngine() {
       },
       update: { status: "cancelled" },
     }),
+
+    autoCloseCrewAttendance(now),
   ]);
 
   results.forEach((r, i) => {

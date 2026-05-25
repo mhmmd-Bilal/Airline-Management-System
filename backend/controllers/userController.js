@@ -125,7 +125,7 @@ const getAllUsers = expressAsyncHandler(async (req, res) => {
   const { search, page = 1, limit = 15 } = req.query;
 
   const query = {
-    role : "passenger"
+    role: "passenger",
   };
 
   if (search) {
@@ -242,16 +242,16 @@ const getUserById = expressAsyncHandler(async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*  PUT /api/users/:id  (admin)                                               */
-/*  Admin can update name, email, phone, role, password                      */
+/*  PUT /api/users/me                                                */
+/*   can update name, email, phone, password                      */
 /* -------------------------------------------------------------------------- */
 const updateUser = expressAsyncHandler(async (req, res) => {
-  const user = await Users.findById(req.params.id);
+  const user = await Users.findById(req.user._id);
 
   if (!user)
     return res.status(404).json({ success: false, message: "User not found" });
 
-  const { name, email, phone, role, password } = req.body;
+  const { name, email, phone, password } = req.body;
 
   /* Duplicate email check */
   if (email && email !== user.email) {
@@ -274,9 +274,8 @@ const updateUser = expressAsyncHandler(async (req, res) => {
   user.name = name ?? user.name;
   user.email = email ? email.toLowerCase().trim() : user.email;
   user.phone = phone ?? user.phone;
-  user.role = role ?? user.role;
 
-  if (password && password.trim().length >= 8) {
+  if (password && password.trim().length >= 6) {
     user.password = await bcrypt.hash(password, 10);
   }
 
@@ -340,6 +339,15 @@ const getMe = expressAsyncHandler(async (req, res) => {
   res.status(200).json({ success: true, data: user });
 });
 
+const logoutUser = expressAsyncHandler(async (req, res) => {
+  res.cookie("authToken", "", {
+    httpOnly: true,
+    expiresIn: new Date(0),
+  });
+
+  res.status(200).json({ message: "logout success" });
+});
+
 export {
   registerUser,
   loginUser,
@@ -349,4 +357,5 @@ export {
   updateUser,
   deleteUser,
   getMe,
+  logoutUser,
 };

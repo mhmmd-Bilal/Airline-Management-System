@@ -99,6 +99,7 @@ export const punchIn = expressAsyncHandler(async (req, res) => {
     staffId: req.user._id,
     date: today,
     clockIn: now,
+    shiftEndsAt: new Date(Date.now() + 16 * 60 * 60 * 1000),
     status: "present",
     biometricVerified: true,
   });
@@ -154,7 +155,8 @@ export const punchOut = expressAsyncHandler(async (req, res) => {
   const hoursOnDuty = (now - attendance.clockIn) / (1000 * 60 * 60);
 
   attendance.clockOut = now;
-  attendance.status = hoursOnDuty < 4 ? "half-day" : "present";
+  attendance.status = "completed";
+  attendance.activeFlightId = null;
   await attendance.save();
 
   res.status(200).json({ success: true, data: attendance });

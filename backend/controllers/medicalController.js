@@ -75,11 +75,11 @@ export const getMyMedicalRecords = expressAsyncHandler(async (req, res) => {
 // ── @route  GET /api/medical
 // ── @access Admin
 export const getAllMedicalRecords = expressAsyncHandler(async (req, res) => {
-  const { status, userType, flightId, page = 1, limit = 15 } = req.query;
+  const { status, flightId, page = 1, limit = 15 } = req.query;
 
   const query = {};
   if (status && status !== "all") query.status = status;
-  if (userType && userType !== "all") query.userType = userType;
+  // if (userType && userType !== "all") query.userType = userType;
   if (flightId) query.flightId = flightId;
 
   const total = await MedicalRecords.countDocuments(query);

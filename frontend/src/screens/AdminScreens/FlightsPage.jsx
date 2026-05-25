@@ -1338,7 +1338,7 @@ export default function FlightsPage() {
                   </td>
                 </tr>
               ) : (
-                flights?.slice().reverse().map((f) => (
+                flights?.map((f) => (
                   <tr key={f._id}>
                     <Td>
                       <span className="font-semibold text-[#1565C0]">

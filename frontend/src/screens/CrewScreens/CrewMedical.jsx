@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSelector } from "react-redux";
 import { Card, SectionLabel, InfoRow } from "../../components/crew/CrewShared";
 import { fmtDate } from "../../components/crew/crewConstants";
-import { useGetCrewByUserIdQuery } from "../../slices/crewApiSlice";
+import { useGetMyCrewProfileQuery } from "../../slices/crewApiSlice";
 import { useGetFlightsByCrewIdQuery } from "../../slices/flightApiSlice";
 import {
   useCreateMedicalRecordMutation,
@@ -559,11 +559,9 @@ export default function CrewMedical() {
   const [page, setPage] = useState(1);
 
   // Crew profile
-  const { data: crewData, isLoading: crewLoading } = useGetCrewByUserIdQuery(
-    userData?._id,
-    { skip: !userData?._id },
-  );
+  const { data: crewData ,isLoading : crewLoading} = useGetMyCrewProfileQuery();
   const crew = crewData?.data;
+
   const crewId = crew?._id;
 
   // Active in-flight flight (for the emergency CTA)

@@ -9,6 +9,7 @@ import {
   updateUser,
   deleteUser,
   getMe,
+  logoutUser,
 } from "../controllers/userController.js";
 import { protect, adminOnly } from "../middlewares/authMiddleware.js";
 
@@ -20,12 +21,13 @@ router.post("/login", loginUser);
 
 /* ── Authenticated ── */
 router.get("/me", protect, getMe);
+router.put("/me", protect, updateUser);
+router.post("/logout",protect,logoutUser)
 
 /* ── Admin only ── */
 router.get("/stats", protect, adminOnly, getUserStats);
 router.get("/", protect, adminOnly, getAllUsers);
 router.get("/:id", protect, adminOnly, getUserById);
-router.put("/:id", protect, adminOnly, updateUser);
 router.delete("/:id", protect, adminOnly, deleteUser);
 
 export default router;

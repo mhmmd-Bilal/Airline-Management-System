@@ -10,6 +10,7 @@ import {
   useUpdateCrewMutation,
   useDeleteCrewMutation,
 } from "../../slices/crewApiSlice";
+import { useNavigate } from "react-router-dom";
 
 const crewRoles = ["Pilot", "Co-Pilot", "Cabin Crew", "Ground Staff"];
 const crewStatuses = ["Available", "On Duty", "Off Duty", "On Leave"];
@@ -332,6 +333,8 @@ export default function CrewPage() {
   const [viewItem, setViewItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [formErrors, setFormErrors] = useState({});
+
+  const navigate = useNavigate()
 
   // ── API hooks ──────────────────────────────────────
   const {
@@ -664,7 +667,9 @@ export default function CrewPage() {
                     <Td>
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => setViewItem(c)}
+                          onClick={() =>
+                            navigate(`/crew/${c?._id ?? c.userId}`)
+                          }
                           className="w-7 h-7 rounded-md border border-[#D0E6F7] bg-[#F0F7FF] flex items-center justify-center text-[#1565C0] hover:bg-[#E1EFFE] transition"
                           title="View"
                         >
